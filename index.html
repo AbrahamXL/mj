@@ -3,72 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 | DIGITAL ART INSTALLATION</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@1,6..96,400;1,6..96,900&family=Tenor+Sans&display=swap" rel="stylesheet">
+    <title>2026 Cinematic Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1@400;1,700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Tenor Sans', sans-serif; }
-        canvas { display: block; filter: contrast(1.1) brightness(1.1); }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; }
+        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
         
-        /* --- 艺术装置 UI --- */
+        /* --- 艺术标题组 --- */
         #ui { 
             position: absolute; 
             top: 50%; left: 50%; 
             transform: translate(-50%, -50%); 
             width: 100%;
+            text-align: center; 
             pointer-events: none; 
             z-index: 5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            transition: transform 0.2s ease-out; 
+        }
+        
+        /* 2026 镂空发光字体 */
+        .year-display {
+            font-size: 15vw;
+            font-weight: 700;
+            line-height: 0.8;
+            margin: 0;
+            letter-spacing: -0.5rem;
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(255, 215, 0, 0.4);
+            opacity: 0.8;
         }
 
-        /* 错位数字设计 */
-        .year-wrapper {
-            position: relative;
-            height: 30vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .digit {
-            font-family: 'Bodoni Moda', serif;
-            font-weight: 900;
-            font-size: 22vw;
-            line-height: 1;
-            margin: 0 -2vw;
-            background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.6) 100%);
+        /* 优雅斜体副标题 */
+        .sub-title {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 2.5vw;
+            color: #fff;
+            letter-spacing: 0.5rem;
+            margin-top: 1rem;
+            text-shadow: 0 0 15px rgba(255,255,255,0.4);
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            background-size: 80% 100%;
+            background-repeat: no-repeat;
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: shimmer 5s infinite linear;
         }
 
-        .digit-offset { transform: translateY(4vh); opacity: 0.6; }
-
-        .sub-text {
-            font-size: 1.2vw;
-            letter-spacing: 1.8rem;
-            color: rgba(255,255,255,0.4);
-            margin-top: 2rem;
-            text-transform: uppercase;
-            font-weight: 400;
-            /* 字符渐隐动画 */
-            animation: textReveal 3s ease-out infinite alternate;
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
 
-        @keyframes textReveal {
-            from { opacity: 0.2; filter: blur(2px); letter-spacing: 1.5rem; }
-            to { opacity: 0.6; filter: blur(0px); letter-spacing: 2rem; }
-        }
-
-        /* 极简状态标识 */
         #status {
-            position: absolute; bottom: 40px; right: 50px;
-            color: rgba(255,255,255,0.2); font-size: 10px;
-            letter-spacing: 3px; transform: rotate(-90deg);
-            transform-origin: right bottom;
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.4); font-size: 0.7rem; font-weight: 400;
+            text-transform: uppercase; letter-spacing: 4px; z-index: 100;
         }
         
         video { display: none; }
@@ -76,14 +65,11 @@
 </head>
 <body>
     <div id="ui">
-        <div class="year-wrapper" id="parallax-box">
-            <span class="digit">20</span>
-            <span class="digit digit-offset">26</span>
-        </div>
-        <div class="sub-text">Happy New Year</div>
+        <h1 class="year-display">2026</h1>
+        <div class="sub-title">Happy New Year</div>
     </div>
     
-    <div id="status">NEURAL LINK ACTIVE</div>
+    <div id="status">Ready for Interaction</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -96,58 +82,57 @@
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
-        const uiBox = document.getElementById('parallax-box');
-        const digits = document.querySelectorAll('.digit');
+        const uiElement = document.getElementById('ui');
         let w, h, dpr, photos = [], particles = [], rockets = [];
         let isStarMode = false, isPinching = false, galaxyTime = 0;
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
 
         const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
-        // 核心渲染逻辑保持高效平滑
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
-                this.orbitRadius = 400 + Math.random() * 600;
+                this.orbitRadius = 300 + Math.random() * 800;
                 this.orbitAngle = Math.random() * Math.PI * 2;
-                this.orbitSpeed = (Math.random() - 0.5) * 0.002;
-                const v = 4 + Math.random() * 6;
+                this.orbitSpeed = (Math.random() - 0.5) * 0.003;
+                const v = 5 + Math.random() * 7;
                 const ang = Math.random() * Math.PI * 2;
                 const p = Math.random() * Math.PI;
                 this.vx = Math.sin(p) * Math.cos(ang) * v; this.vy = Math.sin(p) * Math.sin(ang) * v; this.vz = Math.cos(p) * v;
             }
             update() {
                 if (isStarMode) {
-                    this.orbitAngle += this.orbitSpeed;
-                    this.x += (this.orbitRadius * Math.cos(this.orbitAngle) - this.x) * 0.05;
-                    this.z += (this.orbitRadius * Math.sin(this.orbitAngle) - this.z) * 0.05;
-                    this.alpha = 0.2 + Math.sin(galaxyTime * 0.03 + this.orbitRadius) * 0.1;
+                    let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
+                    this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.04;
+                    this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.04;
+                    this.alpha = 0.3 + Math.sin(galaxyTime * 0.05) * 0.1;
                 } else {
-                    this.vx *= 0.97; this.vy *= 0.97; this.vz *= 0.97; this.vy += 0.06;
+                    this.vx *= 0.96; this.vy *= 0.96; this.vz *= 0.96; this.vy += 0.08;
                     this.x += this.vx; this.y += this.vy; this.z += this.vz;
-                    this.alpha -= 0.012;
+                    this.alpha -= 0.015;
                 }
             }
             draw(rx, ry) {
                 if (this.alpha <= 0) return;
                 const p = project(this.x, this.y, this.z, rx, ry);
-                ctx.fillStyle = `hsla(${this.hue}, 80%, 80%, ${this.alpha * (1 - zoomLerp * 0.8)})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.s * 1.5, 0, Math.PI * 2); ctx.fill();
+                if (p.z < -300) return;
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.9)})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, p.s * 2), 0, Math.PI * 2); ctx.fill();
             }
         }
 
         class Rocket {
             constructor() {
                 this.x = (Math.random()-0.5)*800; this.y = 800; this.z = (Math.random()-0.5)*800;
-                this.targetY = -Math.random()*500; this.hue = 200 + Math.random()*160; this.done = false;
+                this.targetY = -100-Math.random()*400; this.hue = Math.random()*360; this.done = false;
             }
-            update() { this.y -= 20; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
+            update() { this.y -= 18; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
             draw(rx, ry) {
                 const p = project(this.x, this.y, this.z, rx, ry);
-                ctx.fillStyle = `rgba(255,255,255,${0.5 * (1 - zoomLerp)})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = `rgba(255,255,255,${1 - zoomLerp})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2); ctx.fill();
             }
-            explode() { for (let i = 0; i < 40; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
+            explode() { for (let i = 0; i < 50; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
         }
 
         function preloadImages(callback) {
@@ -183,27 +168,19 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = `rgba(0,0,5,${0.25 + zoomLerp * 0.5})`;
+            ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.5})`;
             ctx.fillRect(0, 0, w, h);
 
-            const rotY = (handX - 0.5) * (1 - zoomLerp * 0.9);
-            const rotX = (handY - 0.5) * (1 - zoomLerp * 0.9);
+            const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
+            const rotX = (handY - 0.5) * (1 - zoomLerp * 0.95);
 
-            // --- 标题艺术交互：深度视差 + 动态缩放 ---
-            const uiTiltX = (handX - 0.5) * 30;
-            const uiTiltY = (handY - 0.5) * 20;
-            const uiScale = 1 - zoomLerp * 0.1;
-            const uiBlur = zoomLerp * 4;
-            uiBox.style.transform = `translate3d(${uiTiltX}px, ${uiTiltY}px, 0) scale(${uiScale})`;
-            uiBox.style.filter = `blur(${uiBlur}px)`;
-            digits.forEach((d, i) => {
-                d.style.opacity = 0.7 - zoomLerp * 0.4 + (i*0.1);
-            });
+            // 视差效果
+            uiElement.style.transform = `translate(${-50 + (handX-0.5)*5}%, ${-50 + (handY-0.5)*5}%)`;
 
             if (isStarMode) galaxyTime++;
 
             ctx.globalCompositeOperation = 'lighter';
-            if (!isStarMode && Math.random() < 0.04 && rockets.length < 3) rockets.push(new Rocket());
+            if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
             rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
 
@@ -215,27 +192,24 @@
                 let targetIdx = Math.max(0, Math.min(12, normalizedX * 12));
 
                 currentFocusIndex += (targetIdx - currentFocusIndex) * 0.12;
-                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.15;
+                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.18;
 
                 photos.forEach((pData, i) => {
                     let distIdx = Math.abs(i - currentFocusIndex);
-                    let focusFactor = Math.max(0, 1 - distIdx * 0.35);
+                    let focusFactor = Math.max(0, 1 - distIdx * 0.4);
                     let isTarget = i === Math.round(currentFocusIndex);
                     
-                    ctx.globalAlpha = (0.1 + focusFactor * 0.9) * (1 - zoomLerp) + (isTarget ? zoomLerp : 0);
+                    ctx.globalAlpha = (0.2 + focusFactor * 0.8) * (1 - zoomLerp) + (isTarget ? zoomLerp : 0);
                     if (ctx.globalAlpha <= 0.01) return;
 
                     let zOff = 200 + (isTarget ? (zoomLerp * 300) : (zoomLerp * 1500));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
                     
                     let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 1.0 : 0);
-                    let iw = pData.img.width * p.s * scale * 0.25;
-                    let ih = pData.img.height * p.s * scale * 0.25;
+                    let iw = pData.img.width * p.s * scale * 0.28;
+                    let ih = pData.img.height * p.s * scale * 0.28;
 
-                    if (isTarget && zoomLerp > 0.1) {
-                        ctx.shadowBlur = 40 * zoomLerp;
-                        ctx.shadowColor = "rgba(255,255,255,0.5)";
-                    }
+                    if (isTarget && zoomLerp > 0.1) { ctx.shadowBlur = 40 * zoomLerp; ctx.shadowColor = "#fff"; }
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
                     ctx.shadowBlur = 0;
                 });
@@ -252,7 +226,8 @@
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
-                    handX = 1.0 - h[9].x; handY = h[9].y;
+                    handX = 1.0 - h[9].x; 
+                    handY = h[9].y;
                     const palmSize = dist(h[0], h[9]);
                     const middleRatio = dist(h[12], h[0]) / palmSize;
                     const isHandOpen = middleRatio > 1.6;
@@ -261,7 +236,7 @@
 
                     isStarMode = isHandOpen;
                     isPinching = isNowPinching;
-                    status.innerText = isPinching ? "D E T A I L" : (isStarMode ? "G A L L E R Y" : "S L E E P");
+                    status.innerText = isPinching ? "FOCUSED" : (isStarMode ? "GALLERY" : "CELEBRATION");
                 }
             });
 
