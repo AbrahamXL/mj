@@ -8,37 +8,65 @@
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
         #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); }
         
+        /* 文字容器设计 */
         #title-container {
-            position: absolute; top: 12%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
+            position: absolute; 
+            top: 15%; 
+            width: 100%; 
+            text-align: center; 
+            pointer-events: none; 
+            z-index: 10;
         }
 
         #main-title {
-            font-family: 'ZCOOL XiaoWei', serif; font-size: 5.5rem; font-weight: normal; margin: 0; padding: 0 20px; letter-spacing: 0.15em;
-            background: linear-gradient(to bottom, #fff 20%, #fdfcdc 40%, #e6c778 70%, #c0a060 90%);
-            background-size: 100% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 10px rgba(230, 199, 120, 0.4));
-            animation: titlePulse 4s ease-in-out infinite alternate, glowMove 8s linear infinite;
+            font-family: 'ZCOOL XiaoWei', serif; 
+            font-size: 5rem; 
+            font-weight: normal; 
+            margin: 0; 
+            padding: 0 20px; 
+            letter-spacing: 0.1em;
+            /* 香槟金渐变 */
+            background: linear-gradient(to bottom, #ffffff 10%, #fdfcdc 30%, #e6c778 60%, #c0a060 90%);
+            background-size: 100% 200%; 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            /* 柔和的发光感 */
+            filter: drop-shadow(0 0 15px rgba(230, 199, 120, 0.5));
+            animation: titleBreath 4s ease-in-out infinite alternate;
         }
+
         #main-title span {
-            font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 6rem; margin-right: 15px; letter-spacing: -0.05em; vertical-align: middle;
+            font-family: 'Playfair Display', serif; 
+            font-style: italic; 
+            font-weight: 900; 
+            font-size: 6.5rem; 
+            margin-right: 10px; 
+            letter-spacing: -0.02em; 
+            vertical-align: middle;
+            -webkit-text-fill-color: #fff; /* 数字使用亮白色突出 */
+            text-shadow: 0 0 30px rgba(255,255,255,0.4);
         }
-        @keyframes titlePulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.02); }
+
+        @keyframes titleBreath {
+            from { transform: scale(1); opacity: 0.9; }
+            to { transform: scale(1.03); opacity: 1; }
         }
-        @keyframes glowMove { 0% { background-position: 0% 0%; } 100% { background-position: 0% 200%; } }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); 
-            padding: 14px 40px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.2);
-            backdrop-filter: blur(20px); font-size: 0.85rem; z-index: 100; letter-spacing: 2px;
+            color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); 
+            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(230,199,120,0.3);
+            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
         }
         
         #video-input { display: none; }
     </style>
 </head>
 <body>
+    <div id="title-container">
+        <h1 id="main-title"><span>2026</span>元旦快乐</h1>
+    </div>
+
     <div id="container">
         <div id="info-instructions">正在准备新年礼物...</div>
         <video id="video-input" playsinline></video>
@@ -53,7 +81,7 @@
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        const COUNT = 5200; 
+        const COUNT = 5500; 
         const IMG_COUNT = 10;
 
         function createStarTexture() {
@@ -62,7 +90,7 @@
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
             grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.3, 'rgba(255,250,240,0.8)');
+            grad.addColorStop(0.3, 'rgba(255,250,230,0.8)');
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
@@ -75,33 +103,38 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('container').appendChild(renderer.domElement);
 
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // 照片环 (如果路径错误照片将不可见，但蛋糕会保留)
+            // 照片展示组
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
             for(let i=1; i<=IMG_COUNT; i++) {
-                const texture = loader.load(`./mj/${i}.jpg`, undefined, undefined, (err) => console.log('图片加载略过'));
+                const texture = loader.load(`./mj/${i}.jpg`, undefined, undefined, () => {});
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 24, 0, Math.sin(angle) * 24);
+                mesh.position.set(Math.cos(angle) * 26, 0, Math.sin(angle) * 26);
                 mesh.lookAt(0, 0, 0); 
                 imageGroup.add(mesh);
             }
 
-            // --- 淡雅蛋糕逻辑 ---
+            // --- 结构化粒子蛋糕设计 ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
             const sizeArr = new Float32Array(COUNT);
             const tiers = [{ r: 13, h: 5, y: -11 }, { r: 9.5, h: 5, y: -5 }, { r: 6, h: 5, y: 1 }];
-            const palette = { cake: 0xFFFFF0, accent: 0xFFC1CC, gold: 0xE6C778, flame: 0xFF8C00 };
+            const palette = { 
+                cake: 0xFFFFF0,   // 象牙白
+                accent: 0xFFC1CC, // 淡粉
+                gold: 0xE6C778,   // 金色
+                flame: 0xFFD700   // 烛光
+            };
 
             for(let i=0; i<COUNT; i++) {
                 let vTree = new THREE.Vector3();
@@ -115,13 +148,12 @@
                     const r = THREE.MathUtils.lerp(tiers[tIdx].r, tiers[tIdx+1].r, prog) * 1.03;
                     vTree.set(r * Math.cos(angle), tiers[tIdx].y + 5 - Math.sin(prog * Math.PI)*2, r * Math.sin(angle));
                     pColor.setHex(palette.accent);
-                } else if (i < 1200) { // 蜡烛
-                    const cIdx = Math.floor((i-800)/40);
-                    const ca = cIdx * 1.1; 
-                    vTree.set(tiers[1].r * 0.8 * Math.cos(ca), tiers[1].y + 5 + Math.random()*2.5, tiers[1].r * 0.8 * Math.sin(ca));
+                } else if (i < 1300) { // 蜡烛簇
+                    const cIdx = Math.floor((i-800)/50);
+                    vTree.set(tiers[1].r * 0.8 * Math.cos(cIdx), tiers[1].y + 5 + Math.random()*2.5, tiers[1].r * 0.8 * Math.sin(cIdx));
                     pColor.setHex(i % 10 > 2 ? palette.cake : palette.flame);
-                    pSize = i % 10 > 2 ? 0.4 : 1.2;
-                } else { // 蛋糕体
+                    pSize = i % 10 > 2 ? 0.4 : 1.3;
+                } else { // 蛋糕主体
                     let t = i < COUNT * 0.7 ? tiers[0] : (i < COUNT * 0.9 ? tiers[1] : tiers[2]);
                     const r = t.r * (0.92 + Math.random() * 0.08);
                     vTree.set(r * Math.cos(angle), t.y + Math.random() * t.h, r * Math.sin(angle));
@@ -154,10 +186,10 @@
             requestAnimationFrame(animate);
             const now = Date.now();
             
-            // 极速聚合插值
+            // 聚合速度控制
             morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.2);
             
-            mainGroup.rotation.y += 0.003; // 默认自转
+            mainGroup.rotation.y += 0.003;
             mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY, 0.1);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
@@ -166,15 +198,12 @@
                 mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.1, 0.01, 1.1));
             });
 
-            // 更新粒子坐标
             const posAttr = particleSystem.geometry.attributes.position;
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 posAttr.array[i*3] = currentPos[i].x;
-                // 增加呼吸感微动
-                let wave = Math.sin(now * 0.002 + i) * 0.03;
-                posAttr.array[i*3+1] = currentPos[i].y + wave;
-                posAttr.array[i*3+2] = currentPos[i].z;
+                posAttr.array[i*3+1] = currentPos[i].y + Math.sin(now * 0.002 + i) * 0.04;
+                posAttr.array[i*3+2] = currentPos[i].z; // 修正后的Z轴
             }
             posAttr.needsUpdate = true;
             renderer.render(scene, camera);
@@ -197,9 +226,9 @@
                         targetRotY = (0.5 - h[9].x) * 6;
                         targetRotX = (h[9].y - 0.5) * 3;
 
-                        info.innerHTML = morphFactor > 0.4 ? "✨ 记忆光环已开启" : "🖐️ 慢慢张开手掌";
+                        info.innerHTML = morphFactor > 0.4 ? "✨ 2026 记忆光环已开启" : "🖐️ 请张开手掌";
                     } else {
-                        info.innerText = "👋 展示手掌开始交互";
+                        info.innerText = "👋 挥挥手开启 2026 惊喜";
                     }
                 });
 
@@ -209,7 +238,7 @@
                 });
                 cam.start();
             } catch(e) {
-                info.innerText = "⚠️ 请确保摄像头已开启";
+                info.innerText = "⚠️ 摄像头启动失败";
             }
         }
 
