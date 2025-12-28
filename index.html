@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 影像馆 - 视觉舒适版</title>
+    <title>2026 影像馆 - 精致聚焦版</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
@@ -148,15 +148,14 @@
 
                     if (ctx.globalAlpha <= 0.01) return;
 
-                    // --- 视觉优化核心修改 ---
-                    // 减小 zOff (500 -> 300) 使照片不那么贴脸
                     let zOff = 200 + (isTarget ? (zoomLerp * 300) : (zoomLerp * 1500));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
                     
-                    // 减小 scale (3.0 -> 1.5) 使照片显示尺寸更适中
-                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 1.5 : 0);
-                    let iw = pData.img.width * p.s * scale * 0.35;
-                    let ih = pData.img.height * p.s * scale * 0.35;
+                    // 【核心修改】减小放大倍率 (1.5 -> 1.0)
+                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 1.0 : 0);
+                    // 【微调】稍微减小整体基础尺寸 (0.35 -> 0.3)
+                    let iw = pData.img.width * p.s * scale * 0.3;
+                    let ih = pData.img.height * p.s * scale * 0.3;
 
                     if (isTarget && zoomLerp > 0.1) { ctx.shadowBlur = 30 * zoomLerp; ctx.shadowColor = "#fff"; }
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
