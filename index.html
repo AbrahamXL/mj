@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 影像馆 - 完美平衡版</title>
+    <title>2026 影像馆 - 视觉舒适版</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
@@ -22,7 +22,7 @@
 </head>
 <body>
     <div id="ui"><h1 style="font-weight:200;">STARS GALLERY 2026</h1></div>
-    <div id="status">正在同步神经元手势...</div>
+    <div id="status">手势神经同步中...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -39,10 +39,8 @@
         let isStarMode = false, isPinching = false, galaxyTime = 0;
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
 
-        // --- 工具函数 ---
         const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
-        // --- 特效系统 ---
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
@@ -89,7 +87,6 @@
             explode() { for (let i = 0; i < 60; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
         }
 
-        // --- 核心渲染循环 ---
         function preloadImages(callback) {
             let loadedCount = 0;
             imageUrls.forEach((url, i) => {
@@ -151,16 +148,17 @@
 
                     if (ctx.globalAlpha <= 0.01) return;
 
-                    // 【微调点 1】减小了拉近距离 (550 -> 500)
-                    let zOff = 200 + (isTarget ? (zoomLerp * 500) : (zoomLerp * 1500));
+                    // --- 视觉优化核心修改 ---
+                    // 减小 zOff (500 -> 300) 使照片不那么贴脸
+                    let zOff = 200 + (isTarget ? (zoomLerp * 300) : (zoomLerp * 1500));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
                     
-                    // 【微调点 2】减小了放大倍数 (4.0 -> 3.0)
-                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 3.0 : 0);
-                    let iw = pData.img.width * p.s * scale * 0.4;
-                    let ih = pData.img.height * p.s * scale * 0.4;
+                    // 减小 scale (3.0 -> 1.5) 使照片显示尺寸更适中
+                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 1.5 : 0);
+                    let iw = pData.img.width * p.s * scale * 0.35;
+                    let ih = pData.img.height * p.s * scale * 0.35;
 
-                    if (isTarget && zoomLerp > 0.1) { ctx.shadowBlur = 40 * zoomLerp; ctx.shadowColor = "#fff"; }
+                    if (isTarget && zoomLerp > 0.1) { ctx.shadowBlur = 30 * zoomLerp; ctx.shadowColor = "#fff"; }
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
                     ctx.shadowBlur = 0;
                 });
@@ -169,7 +167,6 @@
             requestAnimationFrame(animate);
         }
 
-        // --- 3. 手势识别的核心（比例算法） ---
         async function setupAI() {
             const status = document.getElementById('status');
             const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
@@ -179,38 +176,26 @@
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
                     handX = h[9].x; handY = h[9].y;
-
-                    // A. 计算基准大小
                     const palmSize = dist(h[0], h[9]);
-                    
-                    // B. 计算指尖比例
                     const middleRatio = dist(h[12], h[0]) / palmSize;
                     const ringRatio = dist(h[16], h[0]) / palmSize;
                     const pinkyRatio = dist(h[20], h[0]) / palmSize;
-                    
-                    // 只要中指、无名指或小指伸出来了，就是张手模式
                     const isHandOpen = middleRatio > 1.6 || ringRatio > 1.6 || pinkyRatio > 1.6;
-                    
-                    // C. 捏合判定
                     const pinchGap = dist(h[8], h[4]) / palmSize;
                     const isNowPinching = isHandOpen && pinchGap < 0.45; 
 
                     if (isNowPinching) {
                         isPinching = true; isStarMode = true;
-                        status.innerText = "✨ 极致聚焦状态";
-                        status.className = "mode-zoom";
+                        status.innerText = "✨ 极致聚焦中"; status.className = "mode-zoom";
                     } else if (isHandOpen) {
                         isPinching = false; isStarMode = true;
-                        status.innerText = "🌌 星河照片墙模式";
-                        status.className = "mode-star";
+                        status.innerText = "🌌 星河照片墙"; status.className = "mode-star";
                     } else {
                         isPinching = false; isStarMode = false;
-                        status.innerText = "🎆 烟火模式（握拳中）";
-                        status.className = "mode-firework";
+                        status.innerText = "🎆 烟火模式（握拳）"; status.className = "mode-firework";
                     }
                 } else {
-                    status.innerText = "👋 欢迎回来，请展示手势";
-                    status.className = "";
+                    status.innerText = "👋 请展示手势"; status.className = "";
                 }
             });
 
