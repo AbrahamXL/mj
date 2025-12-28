@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 mj 星河影像馆</title>
+    <title>2026 秩序星河画廊</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'PingFang SC', sans-serif; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
-        
-        #ui {
-            position: absolute; top: 6%; width: 100%; text-align: center; color: #fff;
-            pointer-events: none; z-index: 10; letter-spacing: 5px;
-        }
+        #ui { position: absolute; top: 6%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 5px; }
         h1 { font-size: 1.6rem; font-weight: 200; margin: 0; text-shadow: 0 0 20px #fff; }
-
         #status {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             color: #fff; font-size: 0.85rem; letter-spacing: 2px;
@@ -21,15 +16,13 @@
             backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.2); z-index: 100;
             white-space: nowrap; transition: all 0.3s;
         }
-        .error-status { background: rgba(255, 0, 0, 0.4) !important; border-color: #ff4444 !important; }
         .highlight { color: #ffd700; border-color: #ffd700 !important; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
-        
         video { display: none; }
     </style>
 </head>
 <body>
     <div id="ui"><h1>GALLERY OF TIME 2026</h1></div>
-    <div id="status">正在初始化 AI 引擎...</div>
+    <div id="status">正在构建秩序空间...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -37,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        // 【1. 路径配置】请确保文件夹名和后缀名完全正确
+        // 【路径配置】请确保这里是正确的 mj 文件夹路径
         const folderName = "mj"; 
         const imageUrls = Array.from({length: 13}, (_, i) => `${folderName}/${i + 1}.jpg`);
 
@@ -49,115 +42,79 @@
         let galaxyTime = 0, currentFocusIndex = 0, zoomLerp = 0;
         let allImagesReady = false;
 
-        // --- 容错图片加载器 ---
         function preloadImages(callback) {
             let loadedCount = 0;
             const statusBox = document.getElementById('status');
-            
             imageUrls.forEach((url, i) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                
+                const img = new Image(); img.crossOrigin = "Anonymous";
                 img.onload = () => {
                     loadedCount++;
                     statusBox.innerText = `影像装填中 (${loadedCount}/13)`;
-                    const angle = (i / 13) * Math.PI * 2 * 1.2;
-                    const radius = 400 + i * 20;
+                    
+                    // --- 核心改动：更整齐的轨道布局 ---
+                    // 将它们排列在一个更平缓的半圆弧轨道上
+                    const angleSpacing = Math.PI * 0.8 / (imageUrls.length - 1); // 总跨度0.8个半圆
+                    const angle = -Math.PI * 0.4 + i * angleSpacing; // 从左到右排列
+                    const radius = 500; // 统一半径，形成清晰的圆环
+
                     photos.push({ 
                         img, 
                         baseX: radius * Math.cos(angle), 
-                        baseY: (i - 6) * 60, 
-                        baseZ: radius * Math.sin(angle), 
+                        baseY: 0, // 【关键】抹平垂直高度差，让它们在同一水平面上
+                        baseZ: radius * Math.sin(angle) + 200, // 稍微推远一点
                         x: 0, y: 0, z: 0 
                     });
-                    if (loadedCount === imageUrls.length) {
-                        allImagesReady = true;
-                        statusBox.innerText = "✅ 影像加载完成，请张开手掌";
-                        callback();
-                    }
+                    if (loadedCount === imageUrls.length) { allImagesReady = true; statusBox.innerText = "✅ 秩序空间已建立，请张手"; callback(); }
                 };
-
-                img.onerror = () => {
-                    statusBox.innerText = `❌ 加载失败: ${url} (请检查路径和后缀)`;
-                    statusBox.classList.add('error-status');
-                    console.error("图片路径错误:", url);
-                };
-                img.src = url;
+                img.onerror = () => { statusBox.innerText = `❌ 加载失败: ${url}`; }; img.src = url;
             });
         }
 
-        // --- 基础数学与投影函数 ---
-        function resize() {
-            w = window.innerWidth; h = window.innerHeight;
-            dpr = Math.min(window.devicePixelRatio, 2);
-            canvas.width = w * dpr; canvas.height = h * dpr;
-            ctx.scale(dpr, dpr);
-        }
-
+        function resize() { w = window.innerWidth; h = window.innerHeight; dpr = Math.min(window.devicePixelRatio, 2); canvas.width = w * dpr; canvas.height = h * dpr; ctx.scale(dpr, dpr); }
         function project(x, y, z) {
-            let x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
-            let z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
-            let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
-            let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
-            const scale = 600 / (600 + z2 + 100); 
-            return { x: x1 * scale + w / 2, y: y2 * scale + h / 2, scale, z: z2 };
+            let x1 = x * Math.cos(rotY) - z * Math.sin(rotY); let z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
+            let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX); let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+            const scale = 600 / (600 + z2 + 100); return { x: x1 * scale + w / 2, y: y2 * scale + h / 2, scale, z: z2 };
         }
 
-        // --- 粒子系统 ---
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
-                this.orbitRadius = 300 + Math.random() * 800;
-                this.orbitAngle = Math.random() * Math.PI * 2;
-                this.orbitSpeed = (Math.random() - 0.5) * 0.003;
-                const v = 6 + Math.random() * 8;
-                const ang = Math.random() * Math.PI * 2;
-                const p = Math.random() * Math.PI;
-                this.vx = Math.sin(p) * Math.cos(ang) * v;
-                this.vy = Math.sin(p) * Math.sin(ang) * v;
-                this.vz = Math.cos(p) * v;
+                this.orbitRadius = 300 + Math.random() * 800; this.orbitAngle = Math.random() * Math.PI * 2; this.orbitSpeed = (Math.random() - 0.5) * 0.003;
+                const v = 6 + Math.random() * 8; const ang = Math.random() * Math.PI * 2; const p = Math.random() * Math.PI;
+                this.vx = Math.sin(p) * Math.cos(ang) * v; this.vy = Math.sin(p) * Math.sin(ang) * v; this.vz = Math.cos(p) * v;
             }
             update() {
                 if (isStarMode) {
                     let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
-                    this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.04;
-                    this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.04;
+                    this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.04; this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.04;
                     this.alpha = 0.5 + Math.sin(galaxyTime * 0.05) * 0.3;
                 } else {
-                    this.vx *= 0.96; this.vy *= 0.96; this.vz *= 0.96; this.vy += 0.08;
-                    this.x += this.vx; this.y += this.vy; this.z += this.vz;
-                    this.alpha -= 0.015;
+                    this.vx *= 0.96; this.vy *= 0.96; this.vz *= 0.96; this.vy += 0.08; this.x += this.vx; this.y += this.vy; this.z += this.vz; this.alpha -= 0.015;
                 }
             }
             draw() {
-                if (this.alpha <= 0) return;
-                const p = project(this.x, this.y, this.z);
-                if (p.z < -300) return;
-                ctx.beginPath();
-                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (isPinching ? 0.3 : 1)})`;
-                ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2);
-                ctx.fill();
+                if (this.alpha <= 0) return; const p = project(this.x, this.y, this.z); if (p.z < -300) return;
+                ctx.beginPath(); ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (isPinching ? 0.3 : 1)})`; ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2); ctx.fill();
             }
         }
 
         class Rocket {
-            constructor() {
-                this.x = (Math.random()-0.5)*400; this.y = 800; this.z = (Math.random()-0.5)*400;
-                this.targetY = -100-Math.random()*300; this.hue = Math.random()*360; this.done = false;
-            }
+            constructor() { this.x = (Math.random()-0.5)*400; this.y = 800; this.z = (Math.random()-0.5)*400; this.targetY = -100-Math.random()*300; this.hue = Math.random()*360; this.done = false; }
             update() { this.y -= 15; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
             draw() { const p = project(this.x, this.y, this.z); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill(); }
             explode() { for (let i = 0; i < 60; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
         }
 
-        // --- 核心动画循环 ---
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = isPinching ? 'rgba(5, 5, 12, 0.7)' : 'rgba(8, 8, 20, 0.3)';
             ctx.fillRect(0, 0, w, h);
 
-            rotY += ((handX - 0.5) * 3.0 - rotY) * 0.05;
-            rotX += ((handY - 0.5) * 2.0 - rotX) * 0.05;
+            // 减小星系模式下的相机晃动幅度，增加稳定感
+            let rotScale = isStarMode ? 0.8 : 1.5;
+            rotY += ((handX - 0.5) * 3.0 * rotScale - rotY) * 0.05;
+            rotX += ((handY - 0.5) * 2.0 * rotScale - rotX) * 0.05;
             if (isStarMode) galaxyTime += 1;
 
             ctx.globalCompositeOperation = 'lighter';
@@ -173,24 +130,30 @@
 
                 photos.forEach((pData, i) => {
                     let dist = Math.abs(i - currentFocusIndex);
-                    let focusFactor = Math.max(0, 1 - dist * 0.6);
+                    // 【核心改动：极端的视觉层级】
+                    // focusFactor 下降得更快，只有非常靠近中心的照片才有高权重
+                    let focusFactor = Math.max(0, 1 - dist * 0.4); 
                     let currentZoom = (i === Math.round(currentFocusIndex)) ? zoomLerp : 0;
 
                     pData.x = pData.baseX * (1 - focusFactor);
                     pData.y = pData.baseY * (1 - focusFactor);
-                    pData.z = pData.baseZ * (1 - focusFactor) + (300 + currentZoom * 150) * focusFactor;
+                    pData.z = pData.baseZ * (1 - focusFactor) + (250 + currentZoom * 200) * focusFactor;
 
                     const p = project(pData.x, pData.y, pData.z);
                     if (p.z < -250) return;
 
-                    let baseScale = 0.4 + focusFactor * 0.6 + currentZoom * 1.0;
-                    let imgW = pData.img.width * p.scale * baseScale * 0.4;
-                    let imgH = pData.img.height * p.scale * baseScale * 0.4;
+                    // 【核心改动：尺寸和透明度的巨大差异】
+                    // 背景照片：基础尺寸只有 0.15 (极小)，透明度只有 0.2 (极淡)
+                    // 焦点照片：尺寸会加很大，透明度变为 1
+                    let baseScale = 0.15 + focusFactor * 0.85 + currentZoom * 1.5;
+                    ctx.globalAlpha = 0.2 + focusFactor * 0.8;
 
-                    ctx.globalAlpha = 0.4 + focusFactor * 0.6;
-                    if (focusFactor > 0.8) {
-                        ctx.shadowBlur = 20 + currentZoom * 35;
-                        ctx.shadowColor = isPinching ? '#fff' : 'rgba(255,215,0,0.5)';
+                    let imgW = pData.img.width * p.scale * baseScale * 0.5;
+                    let imgH = pData.img.height * p.scale * baseScale * 0.5;
+
+                    if (focusFactor > 0.9) {
+                        ctx.shadowBlur = 30 + currentZoom * 40;
+                        ctx.shadowColor = isPinching ? '#fff' : 'rgba(255,215,0,0.6)';
                     }
                     ctx.drawImage(pData.img, p.x - imgW/2, p.y - imgH/2, imgW, imgH);
                     ctx.shadowBlur = 0;
@@ -200,12 +163,10 @@
             requestAnimationFrame(animate);
         }
 
-        // --- AI 手势引擎 ---
         async function setupAI() {
             const status = document.getElementById('status');
             const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
             hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.75 });
-            
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
@@ -213,35 +174,16 @@
                     const pinchDist = Math.hypot(h[8].x - h[4].x, h[8].y - h[4].y);
                     isPinching = isStarMode && pinchDist < 0.055;
                     handX = h[9].x; handY = h[9].y;
-                    
-                    if (isPinching) {
-                        status.innerText = "🔍 正在抓取放大...";
-                        status.classList.add("highlight");
-                    } else if (isStarMode) {
-                        status.innerText = "🌌 滑动照片 | 捏合指尖放大";
-                        status.classList.remove("highlight");
-                    } else {
-                        status.innerText = "🎆 握拳烟火 | 张手星河";
-                        status.classList.remove("highlight");
-                    }
+                    if (isPinching) { status.innerText = "🔍 正在抓取放大..."; status.classList.add("highlight"); }
+                    else if (isStarMode) { status.innerText = "🌌 左右滑动浏览 | 捏合指尖放大"; status.classList.remove("highlight"); }
+                    else { status.innerText = "🎆 握拳烟火 | 张手星河"; status.classList.remove("highlight"); }
                 }
             });
-
-            const cam = new Camera(document.getElementById('v'), {
-                onFrame: async () => { await hands.send({ image: document.getElementById('v') }); },
-                width: 640, height: 480
-            });
-            cam.start().catch(err => {
-                status.innerText = "❌ 摄像头启动失败，请检查权限";
-                status.classList.add('error-status');
-            });
+            const cam = new Camera(document.getElementById('v'), { onFrame: async () => { await hands.send({ image: document.getElementById('v') }); }, width: 640, height: 480 });
+            cam.start().catch(err => { status.innerText = "❌ 摄像头启动失败"; status.classList.add('error-status'); });
         }
 
-        resize();
-        window.onresize = resize;
-        preloadImages(() => {}); 
-        setupAI();
-        animate();
+        resize(); window.onresize = resize; preloadImages(() => {}); setupAI(); animate();
     </script>
 </body>
 </html>
