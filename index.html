@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Auto-Start Gallery</title>
+    <title>2026 Particle Treasure</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400&family=Syncopate:wght@700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -28,13 +28,14 @@
             display: inline-block; border-radius: 20px;
         }
         video { display: none; }
-        body.gathering #ui { opacity: 0; }
+        /* 汇聚时UI淡出 */
+        body.gathering #ui { opacity: 0.3; }
     </style>
 </head>
 <body>
     <div id="ui">
         <h1 class="year">2026</h1>
-        <div class="subtitle">祝你开心</div>
+        <div class="subtitle">藏在星辰里的祝福</div>
         <div id="status">系统准备中...</div>
     </div>
     <canvas id="c"></canvas>
@@ -47,115 +48,154 @@
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
         const totalPhotos = 10;
-        let w, h, dpr, photos = [], bgStars = [], explosions = [];
-        let isHandVisible = false, isPinching = false, handX = 0;
+        let w, h, dpr;
+        // 增加 cakeParticles 数组用于组成蛋糕主体
+        let photos = [], bgStars = [], explosions = [], cakeParticles = [];
+        let isHandVisible = false, isPinching = false;
         let gatherLerp = 0, time = 0;
 
-        const cakeCoords = [];
-        for(let i=0; i<5; i++) { 
-            let a = (i/5)*Math.PI*2; 
-            cakeCoords.push({x: Math.cos(a)*180, y: 150, z: Math.sin(a)*180});
-        }
-        for(let i=0; i<3; i++) { 
-            let a = (i/3)*Math.PI*2 + 0.5;
-            cakeCoords.push({x: Math.cos(a)*100, y: 0, z: Math.sin(a)*100});
-        }
-        for(let i=0; i<2; i++) { 
-            let a = (i/2)*Math.PI*2;
-            cakeCoords.push({x: Math.cos(a)*40, y: -120, z: Math.sin(a)*40});
-        }
+        // 定义蛋糕结构的骨架点
+        const cakeStructure = [];
+        for(let i=0; i<5; i++) { let a=(i/5)*Math.PI*2; cakeStructure.push({x:Math.cos(a)*180, y:150, z:Math.sin(a)*180}); }
+        for(let i=0; i<3; i++) { let a=(i/3)*Math.PI*2+0.5; cakeStructure.push({x:Math.cos(a)*100, y:0, z:Math.sin(a)*100}); }
+        for(let i=0; i<2; i++) { let a=(i/2)*Math.PI*2; cakeStructure.push({x:Math.cos(a)*40, y:-120, z:Math.sin(a)*40}); }
 
         function resize() {
             w = window.innerWidth; h = window.innerHeight;
             dpr = Math.min(window.devicePixelRatio || 1, 2);
             canvas.width = w * dpr; canvas.height = h * dpr;
             ctx.scale(dpr, dpr);
-            bgStars = [];
-            for(let i=0; i<150; i++) {
-                bgStars.push({
-                    x: (Math.random()-0.5)*w*2, y: (Math.random()-0.5)*h*2, z: Math.random()*1000,
-                    size: Math.random()*3, hue: Math.random()*360
+            initParticles();
+        }
+
+        function initParticles() {
+            bgStars = []; cakeParticles = [];
+            // 背景星辰
+            for(let i=0; i<100; i++) {
+                bgStars.push({x:(Math.random()-0.5)*w*2, y:(Math.random()-0.5)*h*2, z:Math.random()*1000, size:Math.random()*2, hue:Math.random()*360});
+            }
+            // 核心：创建组成蛋糕的密集粒子群 (800个)
+            for(let i=0; i<800; i++) {
+                // 随机选择一个蛋糕骨架点作为目标基准
+                let targetBase = cakeStructure[Math.floor(Math.random() * cakeStructure.length)];
+                cakeParticles.push({
+                    // 散开时的随机位置
+                    scatterX: (Math.random()-0.5)*w*1.5,
+                    scatterY: (Math.random()-0.5)*h*1.5,
+                    scatterZ: Math.random()*800,
+                    // 汇聚时的目标位置 (在骨架点附近随机抖动，形成体积感)
+                    targetX: targetBase.x + (Math.random()-0.5)*60,
+                    targetY: targetBase.y + (Math.random()-0.5)*40,
+                    targetZ: targetBase.z + (Math.random()-0.5)*60,
+                    // 粒子属性 (金色/暖色调)
+                    hue: 40 + Math.random() * 20,
+                    size: 1 + Math.random() * 2.5,
+                    speedOffset: Math.random()
                 });
             }
         }
 
         function project(x, y, z) {
-            const fov = 600;
-            const s = fov / (fov + z);
+            const fov = 600; const s = fov / (fov + z);
             return { x: x * s + w/2, y: y * s + h/2, scale: s };
         }
 
         class Explosion {
             constructor(x, y, hue) {
                 this.p = [];
-                for(let i=0; i<40; i++) {
-                    let a = Math.random()*Math.PI*2, spd = Math.random()*5;
-                    this.p.push({x, y, vx: Math.cos(a)*spd, vy: Math.sin(a)*spd, alpha: 1});
-                }
-                this.hue = hue;
+                for(let i=0; i<30; i++) {
+                    let a=Math.random()*Math.PI*2, spd=Math.random()*6;
+                    this.p.push({x, y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, alpha:1});
+                } this.hue = hue;
             }
-            update() {
-                this.p.forEach(part => {
-                    part.x += part.vx; part.y += part.vy; part.vy += 0.1; part.alpha -= 0.02;
-                });
-                this.p = this.p.filter(part => part.alpha > 0);
-            }
-            draw() {
-                this.p.forEach(part => {
-                    ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, ${part.alpha})`;
-                    ctx.beginPath(); ctx.arc(part.x, part.y, 1.5, 0, Math.PI*2); ctx.fill();
-                });
-            }
+            update() { this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.alpha-=0.03;}); this.p=this.p.filter(p=>p.alpha>0); }
+            draw() { this.p.forEach(p=>{ctx.fillStyle=`hsla(${this.hue},80%,60%,${p.alpha})`;ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fill();}); }
         }
 
         function animate() {
             time += 0.015;
-            ctx.fillStyle = 'rgba(0, 0, 5, 0.3)';
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(0, 0, 8, 0.25)'; // 深色背景
             ctx.fillRect(0, 0, w, h);
 
+            // 更新汇聚进度
+            let targetGather = isPinching ? 1 : 0;
+            gatherLerp += (targetGather - gatherLerp) * 0.1;
+            if(gatherLerp > 0.1) document.body.classList.add('gathering');
+            else document.body.classList.remove('gathering');
+
+            // 旋转角度
+            let rot = time * 0.5;
+
+            ctx.globalCompositeOperation = 'lighter'; // 叠加发光模式
+
+            // 1. 绘制背景星辰
             bgStars.forEach(s => {
-                s.z -= 2; if(s.z < 0) s.z = 1000;
-                let p = project(s.x, s.y, s.z);
-                ctx.fillStyle = `hsla(${s.hue}, 70%, 80%, ${0.5 * (1-s.z/1000)})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, s.size * p.scale, 0, Math.PI*2); ctx.fill();
+                s.z-=1.5; if(s.z<0) s.z=1000;
+                let p=project(s.x, s.y, s.z);
+                ctx.fillStyle=`hsla(${s.hue},70%,80%,${0.4*(1-s.z/1000)})`;
+                ctx.beginPath();ctx.arc(p.x,p.y,s.size*p.scale,0,Math.PI*2);ctx.fill();
             });
 
-            if (Math.random() < (isPinching ? 0.08 : 0.02)) {
-                explosions.push(new Explosion(Math.random()*w, Math.random()*h*0.6, Math.random()*360));
+            // 2. 核心：绘制组成蛋糕的粒子群
+            cakeParticles.forEach(cp => {
+                // 计算目标位置的旋转
+                let tx = cp.targetX*Math.cos(rot) - cp.targetZ*Math.sin(rot);
+                let tz = cp.targetX*Math.sin(rot) + cp.targetZ*Math.cos(rot);
+                let ty = cp.targetY;
+
+                // 插值计算当前位置
+                let x = cp.scatterX + (tx - cp.scatterX) * gatherLerp;
+                let y = cp.scatterY + (ty - cp.scatterY) * gatherLerp;
+                let z = cp.scatterZ + (tz - cp.scatterZ) * gatherLerp;
+
+                let p = project(x, y, z);
+                // 汇聚时更亮，散开时变暗
+                let alpha = 0.3 + gatherLerp * 0.7;
+                // 增加一点闪烁感
+                alpha *= (0.8 + Math.sin(time*2 + cp.speedOffset)*0.2);
+
+                ctx.fillStyle = `hsla(${cp.hue}, 100%, 70%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, cp.size * p.scale * (0.8 + gatherLerp*0.5), 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            // 3. 绘制烟花 (仅在张开/散开瞬间触发)
+            if (!isPinching && gatherLerp > 0.1 && Math.random() < 0.1) {
+                explosions.push(new Explosion(w/2 + (Math.random()-0.5)*200, h/2 + (Math.random()-0.5)*200, Math.random()*360));
             }
             explosions.forEach(e => { e.update(); e.draw(); });
             explosions = explosions.filter(e => e.p.length > 0);
 
+            // 4. 绘制照片 (核心修改：只在散开时显示)
+            ctx.globalCompositeOperation = 'source-over';
             if (photos.length > 0) {
-                let targetGather = isPinching ? 1 : 0;
-                gatherLerp += (targetGather - gatherLerp) * 0.1;
-
-                if(gatherLerp > 0.1) document.body.classList.add('gathering');
-                else document.body.classList.remove('gathering');
-
                 let renderQueue = [];
                 photos.forEach((pData, i) => {
-                    let sx = pData.seedX + Math.sin(time + i)*50;
-                    let sy = pData.seedY + Math.cos(time + i)*50;
-                    let sz = pData.seedZ + Math.sin(time*0.5 + i)*100;
-
-                    let target = cakeCoords[i];
-                    let rot = time * 0.8;
-                    let tx = target.x * Math.cos(rot) - target.z * Math.sin(rot);
-                    let tz = target.x * Math.sin(rot) + target.z * Math.cos(rot);
-                    let ty = target.y;
-
+                    // 散开位置漂浮
+                    let sx = pData.seedX + Math.sin(time + i)*30;
+                    let sy = pData.seedY + Math.cos(time + i)*30;
+                    let sz = pData.seedZ;
+                    // 蛋糕骨架位置 (用于计算插值终点，虽然终点不可见)
+                    let target = cakeStructure[i];
+                    let tx = target.x*Math.cos(rot) - target.z*Math.sin(rot);
+                    let tz = target.x*Math.sin(rot) + target.z*Math.cos(rot);
+                    
                     let x = sx + (tx - sx) * gatherLerp;
-                    let y = sy + (ty - sy) * gatherLerp;
+                    let y = sy + (target.y - sy) * gatherLerp;
                     let z = sz + (tz - sz) * gatherLerp;
 
                     let p = project(x, y, z);
-                    let scale = p.scale * (gatherLerp > 0.5 ? 0.25 : 0.35);
                     
-                    renderQueue.push({
-                        img: pData.img, x: p.x, y: p.y, z: z,
-                        s: scale, alpha: gatherLerp > 0.5 ? 1 : 0.6
-                    });
+                    // --- 关键修改：照片可见性逻辑 ---
+                    // gatherLerp 越大(越聚拢)，可见性越低。
+                    // 设置一个阈值，让它们在开始聚拢时就迅速消失
+                    let visibility = Math.max(0, 1 - gatherLerp * 2.0);
+                    
+                    if (visibility > 0.01) {
+                        renderQueue.push({img: pData.img, x: p.x, y: p.y, z: z, s: p.scale * 0.3, alpha: visibility});
+                    }
                 });
 
                 renderQueue.sort((a,b) => b.z - a.z);
@@ -164,11 +204,9 @@
                     ctx.globalAlpha = item.alpha;
                     ctx.translate(item.x, item.y);
                     let iw = item.img.width * item.s, ih = item.img.height * item.s;
+                    // 给照片加个淡淡的光晕
+                    ctx.shadowColor = 'rgba(255,215,0,0.5)'; ctx.shadowBlur = 10;
                     ctx.drawImage(item.img, -iw/2, -ih/2, iw, ih);
-                    if(gatherLerp > 0.8) {
-                        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
-                        ctx.strokeRect(-iw/2, -ih/2, iw, ih);
-                    }
                     ctx.restore();
                 });
             }
@@ -176,18 +214,19 @@
         }
 
         async function initAI() {
-            document.getElementById('status').innerText = "📷 正在启动相机...";
+            document.getElementById('status').innerText = "📷 启动相机...";
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
-                    isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.05;
-                    document.getElementById('status').innerText = isPinching ? "🎂 生日快乐！" : "👋 已就绪：捏合手指汇聚蛋糕";
+                    // 捏合判定
+                    isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.06;
+                    document.getElementById('status').innerText = isPinching ? "✨ 宝藏已隐藏" : "🎉 张开手掌显现照片";
                 } else {
-                    isHandVisible = false; isPinching = false;
-                    document.getElementById('status').innerText = "🔍 寻找手掌中...";
+                    isHandVisible = false; isPinching = false; // 手消失默认为散开
+                    document.getElementById('status').innerText = "👀 寻找手掌...";
                 }
             });
 
@@ -196,33 +235,20 @@
                 width: 320, height: 240
             });
 
-            // 核心修改：直接调用 start()，不再等待 touchstart
-            cam.start().catch(err => {
-                console.log("Autostart blocked, waiting for touch");
-                document.getElementById('status').innerText = "⚠️ 请点击屏幕开启相机";
-                // 备用方案：如果自动启动被拦截，点击任何地方都会再次尝试
-                window.addEventListener('click', () => { cam.start(); }, {once: true});
+            cam.start().catch(e => {
+                document.getElementById('status').innerText = "⚠️ 需要点击屏幕开启";
+                window.addEventListener('click', ()=>cam.start(), {once:true});
             });
         }
 
         resize();
         window.addEventListener('resize', resize);
-        
         let loaded = 0;
         for(let i=1; i<=totalPhotos; i++) {
-            const img = new Image(); img.crossOrigin = "anonymous";
-            img.src = `mj/${i}.jpg`;
+            const img = new Image(); img.crossOrigin = "anonymous"; img.src = `mj/${i}.jpg`;
             img.onload = () => {
-                photos.push({
-                    img, 
-                    seedX: (Math.random()-0.5)*w*1.5,
-                    seedY: (Math.random()-0.5)*h*1.5,
-                    seedZ: Math.random()*500
-                });
-                if(++loaded === totalPhotos) { 
-                    initAI(); 
-                    animate(); 
-                }
+                photos.push({img, seedX:(Math.random()-0.5)*w*1.8, seedY:(Math.random()-0.5)*h*1.8, seedZ:Math.random()*600});
+                if(++loaded === totalPhotos) { initAI(); animate(); }
             };
         }
     </script>
