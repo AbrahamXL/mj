@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Starry Focus</title>
+    <title>2026 Elegant Focus</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -17,7 +17,6 @@
         .blessing { font-size: 4vw; color: rgba(255,255,255,0.4); margin-top: 5px; letter-spacing: 2px; }
         #status { margin-top: 15px; color: #555; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 20px; display: inline-block; }
         video { display: none; }
-        /* 聚焦模式下 UI 彻底消失 */
         body.focus-mode #ui { opacity: 0; }
     </style>
 </head>
@@ -80,21 +79,17 @@
             time += 0.012;
             ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
 
-            // 状态控制：有手即散开
             let targetGather = isHandVisible ? 0 : 1;
             gatherLerp += (targetGather - gatherLerp) * 0.08;
-            
-            // 聚焦控制：捏合且有选中则聚焦
             let targetIso = (isPinching && selectedIdx !== -1 && isHandVisible) ? 1 : 0;
             isolatingLerp += (targetIso - isolatingLerp) * 0.12;
 
             if(isolatingLerp > 0.1) document.body.classList.add('focus-mode');
             else document.body.classList.remove('focus-mode');
 
-            // 1. 绘制星辰粒子
             ctx.globalCompositeOperation = 'lighter';
             let rot = time * 0.4;
-            let bgDim = 1 - isolatingLerp * 0.92; // 聚焦时背景变暗
+            let bgDim = 1 - isolatingLerp * 0.85; // 背景变暗程度稍微减弱一点
 
             [...bgStars, ...cakeParticles].forEach(p => {
                 let x, y, z;
@@ -109,7 +104,6 @@
                 ctx.beginPath(); ctx.arc(proj.x, proj.y, p.size*proj.scale, 0, Math.PI*2); ctx.fill();
             });
 
-            // 2. 绘制照片相册
             ctx.globalCompositeOperation = 'source-over';
             if (photos.length > 0) {
                 let baseVis = Math.max(0, 1 - gatherLerp * 1.5);
@@ -118,17 +112,14 @@
 
                 photos.forEach((pData, i) => {
                     let isThisSelected = (selectedIdx === i);
-                    // 聚焦时，非选中的照片迅速淡出
                     let isoVis = isThisSelected ? 1 : (1 - isolatingLerp * 2);
                     let finalAlpha = baseVis * Math.max(0, isoVis);
 
                     if (finalAlpha > 0.01) {
-                        // 初始漂浮坐标
                         let px = pData.seedX + Math.sin(time + i) * 20;
                         let py = pData.seedY + Math.cos(time + i) * 20;
                         let pProj = project(px, py, pData.seedZ);
 
-                        // 划动检测
                         if (baseVis > 0.5 && isHandVisible && isolatingLerp < 0.1) {
                             let d = Math.hypot(pProj.x - pointerPos.x, pProj.y - pointerPos.y);
                             if (d < minDist) { minDist = d; newSelected = i; }
@@ -139,22 +130,26 @@
                         ctx.save();
                         ctx.globalAlpha = finalAlpha;
 
-                        // 【核心】位置计算：如果选中并聚焦，向屏幕中心 (w/2, h/2) 位移
+                        // 位置计算：飞向屏幕中心
                         let curX = pProj.x + (w/2 - pProj.x) * (isThisSelected ? isolatingLerp : 0);
                         let curY = pProj.y + (h/2 - pProj.y) * (isThisSelected ? isolatingLerp : 0);
                         ctx.translate(curX, curY);
 
-                        // 【核心】缩放计算
-                        let scatterScale = pProj.scale * (0.12 + pData.selectLerp * 0.1); 
-                        let targetLargeScale = (Math.min(w, h) * 0.8) / pData.img.width; // 屏幕宽/高中较小值的80%
-                        let finalScale = scatterScale + (targetLargeScale - scatterScale) * (isThisSelected ? isolatingLerp : 0);
+                        // 【关键修改】缩放计算：适度放大
+                        // 散开状态的基础倍率 (未选中很小，选中稍大)
+                        let baseMultiplier = 0.12 + pData.selectLerp * 0.1; 
+                        // 聚焦状态的目标倍率 (固定为 0.45，大约是选中状态的2倍)
+                        let targetMultiplier = 0.45; 
+                        // 插值计算当前倍率
+                        let currentMultiplier = baseMultiplier + (targetMultiplier - baseMultiplier) * (isThisSelected ? isolatingLerp : 0);
+                        let finalScale = pProj.scale * currentMultiplier;
 
                         ctx.drawImage(pData.img, -pData.img.width*finalScale/2, -pData.img.height*finalScale/2, pData.img.width*finalScale, pData.img.height*finalScale);
                         
-                        // 聚焦时的精美边框
                         if (isThisSelected && isolatingLerp > 0.05) {
                             ctx.strokeStyle = `rgba(255, 215, 0, ${isolatingLerp})`;
-                            ctx.lineWidth = 1 + isolatingLerp * 3;
+                            // 边框稍微细一点，配合精致感
+                            ctx.lineWidth = 1 + isolatingLerp * 2;
                             ctx.strokeRect(-pData.img.width*finalScale/2, -pData.img.height*finalScale/2, pData.img.width*finalScale, pData.img.height*finalScale);
                         }
                         ctx.restore();
@@ -163,7 +158,6 @@
                 if (!isPinching) selectedIdx = newSelected;
             }
 
-            // 指尖小白点（仅在探索模式下显示）
             if (isHandVisible && gatherLerp < 0.5 && isolatingLerp < 0.2) {
                 ctx.fillStyle = 'rgba(255,255,255,0.7)';
                 ctx.beginPath(); ctx.arc(pointerPos.x, pointerPos.y, 4, 0, Math.PI*2); ctx.fill();
