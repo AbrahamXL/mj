@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 New Year Cake</title>
+    <title>2026 Interactive Gallery</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -11,34 +11,20 @@
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
         #ui { 
             position: absolute; top: 40px; left: 0; width: 100%; z-index: 10; 
-            pointer-events: none; transition: opacity 0.8s ease, transform 0.8s ease; text-align: center;
+            pointer-events: none; transition: opacity 0.8s ease; text-align: center;
         }
-        .year { 
-            font-family: 'Cinzel Decorative', cursive;
-            font-size: 15vw; color: rgba(255,230,150,0.4); 
-            margin: 0; line-height: 0.8; text-shadow: 0 0 30px rgba(255,200,50,0.3);
-        }
-        .subtitle {
-            font-family: 'Playfair Display', serif; font-weight: 700;
-            font-size: 6vw; color: rgba(255, 230, 180, 0.9); margin-top: 15px; letter-spacing: 3px;
-            text-shadow: 0 0 10px rgba(255,215,0,0.5);
-        }
-        #status { 
-            margin-top: 25px; color: rgba(255,255,255,0.8); font-size: 12px; 
-            padding: 6px 12px; background: rgba(50,50,50,0.3); 
-            display: inline-block; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            font-family: sans-serif; transition: opacity 0.3s;
-        }
+        .year { font-family: 'Cinzel Decorative', cursive; font-size: 15vw; color: rgba(255,230,150,0.3); margin: 0; line-height: 0.8; }
+        .subtitle { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 6vw; color: rgba(255, 230, 180, 0.8); margin-top: 15px; letter-spacing: 3px; }
+        #status { margin-top: 25px; color: rgba(255,255,255,0.6); font-size: 11px; padding: 6px 15px; background: rgba(255,215,0,0.1); display: inline-block; border-radius: 20px; border: 1px solid rgba(255,215,0,0.2); }
         video { display: none; }
-        /* 散开照片时，UI 淡出 */
-        body.scattering #ui { opacity: 0; transform: translateY(-30px); }
+        body.focus-mode #ui { opacity: 0; }
     </style>
 </head>
 <body>
     <div id="ui">
         <h1 class="year">2026</h1>
         <div class="subtitle">元旦快乐</div>
-        <div id="status">正在筹备庆典...</div>
+        <div id="status">正在同步星辰...</div>
     </div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
@@ -50,11 +36,10 @@
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
         const totalPhotos = 10;
-        let w, h, dpr;
-        let photos = [], bgStars = [], explosions = [], cakeParticles = [];
-        let isHandVisible = false, isPinching = false;
-        // 核心修改1: 初始 gatherLerp 设为 1，即初始状态为聚拢的蛋糕
+        let w, h, dpr, photos = [], bgStars = [], explosions = [], cakeParticles = [];
+        let isHandVisible = false, isPinching = false, pointerPos = {x: 0, y: 0};
         let gatherLerp = 1, time = 0;
+        let selectedIdx = -1; // 当前选中的照片索引
 
         function resize() {
             w = window.innerWidth; h = window.innerHeight;
@@ -64,41 +49,25 @@
             initParticles();
         }
 
-        function getCylinderPoint(radius, heightBot, heightTop) {
-            let a = Math.random() * Math.PI * 2;
-            let h = heightBot + Math.random() * (heightTop - heightBot);
-            let r = radius + (Math.random() - 0.5) * 5;
-            return { x: Math.cos(a) * r, y: h, z: Math.sin(a) * r };
-        }
-
         function initParticles() {
             bgStars = []; cakeParticles = [];
-            for(let i=0; i<150; i++) {
-                bgStars.push({x:(Math.random()-0.5)*w*3, y:(Math.random()-0.5)*h*3, z:Math.random()*1500, size:Math.random()*2.5, hue:200+Math.random()*60});
-            }
-
-            const addParticle = (target, type) => {
-                let hue, saturation, lightness, sizeBase;
-                if (type === 'base') { hue = 35 + Math.random() * 15; saturation = '80%'; lightness = '70%'; sizeBase = 1.5; }
-                else if (type === 'rim') { hue = 45 + Math.random() * 5; saturation = '100%'; lightness = '85%'; sizeBase = 2.5; }
-                else if (type === 'gem') { hue = Math.random() < 0.7 ? 0 : 200; saturation = '90%'; lightness = '60%'; sizeBase = 3.5; }
-
+            for(let i=0; i<100; i++) bgStars.push({x:(Math.random()-0.5)*w*3, y:(Math.random()-0.5)*h*3, z:Math.random()*1500, size:Math.random()*2, hue:210});
+            
+            const addP = (target, type) => {
                 cakeParticles.push({
-                    scatterX: (Math.random()-0.5)*w*2, scatterY: (Math.random()-0.5)*h*2, scatterZ: Math.random()*1000,
-                    targetX: target.x, targetY: target.y, targetZ: target.z,
-                    color: `hsla(${hue}, ${saturation}, ${lightness}, `,
-                    size: sizeBase + Math.random() * 1.5,
-                    speedOffset: Math.random() * Math.PI * 2,
-                    type: type
+                    sx: (Math.random()-0.5)*w*2.5, sy: (Math.random()-0.5)*h*2.5, sz: Math.random()*1000,
+                    tx: target.x, ty: target.y, tz: target.z,
+                    color: type === 'rim' ? 'hsla(45,100%,80%,' : 'hsla(35,80%,70%,',
+                    size: (type==='rim'?2.5:1.5) + Math.random(),
+                    off: Math.random()*Math.PI*2,
+                    curZ: 0
                 });
             };
-
-            for(let i=0; i<1500; i++) addParticle(getCylinderPoint(200, 100, 220), 'base');
-            for(let i=0; i<300; i++) { let a = (i/300)*Math.PI*2; addParticle({x:Math.cos(a)*205, y:100, z:Math.sin(a)*205}, 'rim'); if(i%10===0) addParticle({x:Math.cos(a)*205, y:100, z:Math.sin(a)*205}, 'gem'); }
-            for(let i=0; i<1000; i++) addParticle(getCylinderPoint(130, -20, 100), 'base');
-            for(let i=0; i<250; i++) { let a = (i/250)*Math.PI*2; addParticle({x:Math.cos(a)*135, y:-20, z:Math.sin(a)*135}, 'rim'); }
-            for(let i=0; i<600; i++) addParticle(getCylinderPoint(70, -100, -20), 'base');
-            for(let i=0; i<150; i++) { let a = Math.random()*Math.PI*2, r = Math.random()*30; addParticle({x:Math.cos(a)*r, y:-120 - Math.random()*40, z:Math.sin(a)*r}, 'rim'); }
+            const getCyl = (r, b, t) => { let a=Math.random()*Math.PI*2, h=b+Math.random()*(t-b); return {x:Math.cos(a)*r, y:h, z:Math.sin(a)*r}; };
+            for(let i=0; i<1500; i++) addP(getCyl(180, 80, 200), 'base');
+            for(let i=0; i<800; i++) addP(getCyl(110, -30, 80), 'base');
+            for(let i=0; i<500; i++) addP(getCyl(60, -110, -30), 'base');
+            for(let i=0; i<300; i++) { let a=(i/300)*Math.PI*2; addP({x:Math.cos(a)*185, y:80, z:Math.sin(a)*185}, 'rim'); }
         }
 
         function project(x, y, z) {
@@ -106,117 +75,108 @@
             return { x: x * s + w/2, y: y * s + h/2, scale: s };
         }
 
-        class Explosion {
-            constructor(x, y) {
-                this.p = [];
-                for(let i=0; i<50; i++) {
-                    let a=Math.random()*Math.PI*2, spd=Math.random()*8;
-                    this.p.push({x, y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, alpha:1, hue: 40+Math.random()*20});
-                }
-            }
-            update() { this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.alpha-=0.025;}); this.p=this.p.filter(p=>p.alpha>0); }
-            draw() { this.p.forEach(p=>{ctx.fillStyle=`hsla(${p.hue},100%,70%,${p.alpha})`;ctx.beginPath();ctx.arc(p.x,p.y,2.5,0,Math.PI*2);ctx.fill();}); }
-        }
-
         function animate() {
             time += 0.02;
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = 'rgba(8, 5, 16, 0.3)'; 
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#020205'; ctx.fillRect(0, 0, w, h);
 
-            // 核心修改2: 交互逻辑反转
-            // 只有在检测到手且张开时，目标才是散开(0)，否则保持聚拢(1)
-            let targetGather = (isHandVisible && !isPinching) ? 0 : 1;
-            gatherLerp += (targetGather - gatherLerp) * 0.08;
+            // 逻辑：如果没看到手，或是捏合状态且没选中照片，就聚拢成蛋糕
+            let targetGather = (isHandVisible && !isPinching) ? 0 : (isPinching && selectedIdx !== -1 ? 0 : 1);
+            gatherLerp += (targetGather - gatherLerp) * 0.1;
 
-            // UI 控制：当开始散开时，UI淡出
-            if(gatherLerp < 0.9) document.body.classList.add('scattering');
-            else document.body.classList.remove('scattering');
-
-            let rot = time * 0.6;
-            let tilt = Math.sin(time*0.4) * 0.1;
-
-            ctx.globalCompositeOperation = 'lighter'; 
-
-            bgStars.forEach(s => {
-                s.z-=2; if(s.z<0) s.z=1500;
-                let p=project(s.x, s.y, s.z);
-                ctx.fillStyle=`hsla(${s.hue},60%,40%,${0.5*(1-s.z/1500)})`;
-                ctx.beginPath();ctx.arc(p.x,p.y,s.size*p.scale,0,Math.PI*2);ctx.fill();
-            });
-
-            cakeParticles.sort((a, b) => b.curZ - a.curZ);
+            ctx.globalCompositeOperation = 'lighter';
+            // 背景与蛋糕粒子
+            let rot = time * 0.5;
+            cakeParticles.sort((a,b)=>b.curZ - a.curZ);
             cakeParticles.forEach(cp => {
-                let tx = cp.targetX*Math.cos(rot) - cp.targetZ*Math.sin(rot);
-                let tz = cp.targetX*Math.sin(rot) + cp.targetZ*Math.cos(rot);
-                let ty = cp.targetY + tz * tilt; 
-                tx = tx * Math.cos(tilt);
-
-                let x = cp.scatterX + (tx - cp.scatterX) * gatherLerp;
-                let y = cp.scatterY + (ty - cp.scatterY) * gatherLerp;
-                let z = cp.scatterZ + (tz - cp.scatterZ) * gatherLerp;
+                let tx = cp.tx*Math.cos(rot) - cp.tz*Math.sin(rot);
+                let tz = cp.tx*Math.sin(rot) + cp.tz*Math.cos(rot);
+                let x = cp.sx + (tx - cp.sx) * gatherLerp;
+                let y = cp.sy + (cp.ty - cp.sy) * gatherLerp;
+                let z = cp.sz + (tz - cp.sz) * gatherLerp;
                 cp.curZ = z;
-
                 let p = project(x, y, z);
-                
-                let baseAlpha = 0.2 + gatherLerp * 0.8;
-                let flicker = 0.8 + Math.sin(time*3 + cp.speedOffset)*0.2;
-                let alpha = baseAlpha * flicker;
-                if (cp.type === 'rim' || cp.type === 'gem') alpha = Math.min(1, alpha * 1.5);
-
-                ctx.fillStyle = cp.color + alpha + ')';
-                ctx.beginPath();
-                let size = cp.size * p.scale * (0.8 + gatherLerp*0.4);
-                ctx.arc(p.x, p.y, size, 0, Math.PI*2);
-                ctx.fill();
+                ctx.fillStyle = cp.color + (0.2+gatherLerp*0.7) + ')';
+                ctx.beginPath(); ctx.arc(p.x, p.y, cp.size*p.scale, 0, Math.PI*2); ctx.fill();
             });
 
-            // 烟花逻辑修改：在散开的过程中触发
-            if (isHandVisible && !isPinching && gatherLerp < 0.8 && gatherLerp > 0.2 && Math.random() < 0.1) {
-                explosions.push(new Explosion(w/2 + (Math.random()-0.5)*300, h/2 + (Math.random()-0.5)*300));
-            }
-            explosions.forEach(e => { e.update(); e.draw(); });
-            explosions = explosions.filter(e => e.p.length > 0);
-
+            // 照片选择与放大逻辑
             ctx.globalCompositeOperation = 'source-over';
             if (photos.length > 0) {
-                // 照片可见性公式不变：聚拢时隐藏，散开时显示
-                let visibility = Math.pow(Math.max(0, 1 - gatherLerp * 1.5), 3);
-                if (visibility > 0.01) {
-                    photos.forEach((pData, i) => {
-                        let sx = pData.seedX + Math.sin(time+i)*40;
-                        let sy = pData.seedY + Math.cos(time+i)*40;
-                        let sz = pData.seedZ;
-                        let p = project(sx, sy, sz);
-                        
+                let vis = Math.max(0, 1 - gatherLerp * 1.5);
+                let minDist = 100;
+                let newSelected = -1;
+
+                photos.forEach((pData, i) => {
+                    let p = project(pData.seedX, pData.seedY, pData.seedZ);
+                    // 在散开模式下寻找距离指尖最近的照片
+                    if (vis > 0.5 && isHandVisible && !isPinching) {
+                        let d = Math.hypot(p.x - pointerPos.x, p.y - pointerPos.y);
+                        if (d < minDist) { minDist = d; newSelected = i; }
+                    }
+
+                    // 平滑过渡每张照片的选中状态
+                    let isThisSelected = (selectedIdx === i);
+                    pData.selectLerp += (isThisSelected ? 1 : 0 - pData.selectLerp) * 0.15;
+                    // 平滑过渡放大状态
+                    let isZoomed = (isThisSelected && isPinching);
+                    pData.zoomLerp += (isZoomed ? 1 : 0 - pData.zoomLerp) * 0.1;
+
+                    if (vis > 0.01 || pData.zoomLerp > 0.01) {
                         ctx.save();
-                        ctx.globalAlpha = visibility * 0.8;
-                        ctx.translate(p.x, p.y);
-                        let s = p.scale * 0.28;
+                        // 放大时背景照片变淡
+                        let finalAlpha = vis * 0.8 * (1 - pData.zoomLerp);
+                        if (isThisSelected) finalAlpha = Math.max(finalAlpha, pData.zoomLerp || pData.selectLerp*0.9);
+                        
+                        ctx.globalAlpha = finalAlpha;
+                        
+                        // 计算位置：如果是放大状态，向屏幕中心位移
+                        let curX = p.x + (w/2 - p.x) * pData.zoomLerp;
+                        let curY = p.y + (h/2 - p.y) * pData.zoomLerp;
+                        ctx.translate(curX, curY);
+
+                        // 缩放控制：基础 + 选中微增 + 捏合剧增
+                        let s = p.scale * (0.28 + pData.selectLerp*0.1 + pData.zoomLerp*2.5);
                         ctx.drawImage(pData.img, -pData.img.width*s/2, -pData.img.height*s/2, pData.img.width*s, pData.img.height*s);
-                        ctx.strokeStyle = `rgba(255,215,0,${visibility})`; ctx.lineWidth = 1;
-                        ctx.strokeRect(-pData.img.width*s/2, -pData.img.height*s/2, pData.img.width*s, pData.img.height*s);
+                        
+                        // 装饰框
+                        if (pData.selectLerp > 0.1) {
+                            ctx.strokeStyle = `rgba(255,215,0,${pData.selectLerp})`;
+                            ctx.lineWidth = 2 + pData.zoomLerp*5;
+                            ctx.strokeRect(-pData.img.width*s/2, -pData.img.height*s/2, pData.img.width*s, pData.img.height*s);
+                        }
                         ctx.restore();
-                    });
-                }
+                    }
+                });
+                selectedIdx = newSelected !== -1 ? newSelected : (isPinching ? selectedIdx : -1);
             }
+
+            // 绘制指尖光点
+            if (isHandVisible && gatherLerp < 0.5) {
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = '#fff';
+                ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 15;
+                ctx.beginPath(); ctx.arc(pointerPos.x, pointerPos.y, 5, 0, Math.PI*2); ctx.fill();
+            }
+
             requestAnimationFrame(animate);
         }
 
         async function initAI() {
-            document.getElementById('status').innerText = "✨ 正在唤醒星辰...";
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
+                    // 映射指尖坐标 (lm[8] 是食指尖)
+                    pointerPos.x = (1 - lm[8].x) * w;
+                    pointerPos.y = lm[8].y * h;
                     isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.06;
-                    // 更新状态文案
-                    document.getElementById('status').innerText = isPinching ? "🎂 蛋糕已聚拢" : "🎉 张开手掌，显现惊喜";
+                    document.getElementById('status').innerText = isPinching ? "✨ 锁定视野" : "☝️ 移动指尖选择照片";
                 } else {
                     isHandVisible = false; isPinching = false;
-                    document.getElementById('status').innerText = "👀 寻找手势指令...";
+                    document.getElementById('status').innerText = "👀 等待指令...";
                 }
             });
 
@@ -224,9 +184,8 @@
                 onFrame: async () => { await hands.send({image: document.getElementById('v')}); },
                 width: 320, height: 240
             });
-
-            cam.start().catch(e => {
-                document.getElementById('status').innerText = "⚠️ 点击屏幕开启体验";
+            cam.start().catch(() => {
+                document.getElementById('status').innerText = "⚠️ 点击授权开启庆典";
                 window.addEventListener('click', ()=>cam.start(), {once:true});
             });
         }
@@ -237,7 +196,10 @@
         for(let i=1; i<=totalPhotos; i++) {
             const img = new Image(); img.crossOrigin = "anonymous"; img.src = `mj/${i}.jpg`;
             img.onload = () => {
-                photos.push({img, seedX:(Math.random()-0.5)*w*1.8, seedY:(Math.random()-0.5)*h*1.8, seedZ:Math.random()*600});
+                photos.push({
+                    img, selectLerp: 0, zoomLerp: 0,
+                    seedX: (Math.random()-0.5)*w*1.5, seedY: (Math.random()-0.5)*h*1.5, seedZ: 200 + Math.random()*400
+                });
                 if(++loaded === totalPhotos) { initAI(); animate(); }
             };
         }
