@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 Eternal Galaxy</title>
+    <title>2026 Warm Celebration</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.3); }
+        /* 保持较高的饱和度，让暖色更突出 */
+        canvas { display: block; filter: contrast(1.1) saturate(1.4); }
         
         #ui { 
             position: absolute; top: 50%; left: 50%; 
@@ -56,7 +57,6 @@
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
         const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
-        // --- 核心修改点 ---
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
@@ -73,10 +73,8 @@
                     let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
                     this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.04;
                     this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.04;
-                    // 星河模式下粒子的闪烁
                     this.alpha = 0.5 + Math.sin(galaxyTime * 0.05 + this.orbitRadius) * 0.3;
                 } else {
-                    // 烟花模式下的物理运动
                     this.vx *= 0.975; this.vy *= 0.975; this.vz *= 0.975; 
                     this.vy += 0.06; 
                     this.x += this.vx; this.y += this.vy; this.z += this.vz;
@@ -87,12 +85,8 @@
                 if (this.alpha <= 0) return;
                 const p = project(this.x, this.y, this.z, rx, ry);
                 if (p.z < -300) return;
-                
-                // 【关键修改】
-                // 之前这里是：rgba(..., this.alpha * (1 - zoomLerp * 0.9))
-                // 去掉了 zoomLerp 的影响，粒子透明度只由它自己的 alpha 决定
-                ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha})`;
-                
+                // 使用高亮度和高饱和度的 HSLA 颜色，确保暖色明亮
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 65%, ${this.alpha})`;
                 ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.8, p.s * 2.5), 0, Math.PI * 2); ctx.fill();
             }
         }
@@ -100,12 +94,20 @@
         class Rocket {
             constructor() {
                 this.x = (Math.random()-0.5)*800; this.y = 800; this.z = (Math.random()-0.5)*800;
-                this.targetY = -200-Math.random()*400; this.hue = Math.random()*360; this.done = false;
+                this.targetY = -200-Math.random()*400; 
+                this.done = false;
+
+                // --- 【核心修改】暖色调色板 ---
+                // 0=红, 30=橙, 45=金黄, 350=暖粉红
+                const warmPalettes = [0, 30, 45, 350]; 
+                // 随机选择一个基准暖色
+                let baseHue = warmPalettes[Math.floor(Math.random() * warmPalettes.length)];
+                // 在基准色附近增加一点点随机偏移，让色彩更丰富但不跑偏
+                this.hue = baseHue + (Math.random() - 0.5) * 20;
             }
             update() { this.y -= 20; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
             draw(rx, ry) {
                 const p = project(this.x, this.y, this.z, rx, ry);
-                // 火箭上升时也会变淡，这里可以保留或者去掉 zoomLerp，保留会让焦点更集中在照片上
                 ctx.fillStyle = `rgba(255,255,255,${1 - zoomLerp * 0.5})`;
                 ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
             }
@@ -146,7 +148,6 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            // 放大时背景稍微变暗一点点，对比度更好
             ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.3})`;
             ctx.fillRect(0, 0, w, h);
             const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
