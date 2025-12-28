@@ -4,38 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Happy New Year 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;400&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Montserrat', sans-serif; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
-        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 3px; }
         
-        /* 新增：标题特定样式，金色流光效果 */
-        h1.title-glow {
-            font-weight: 200;
+        /* --- 标题极致设计 --- */
+        #ui { 
+            position: absolute; 
+            top: 50%; /* 垂直居中 */
+            left: 50%; /* 水平居中 */
+            transform: translate(-50%, -50%); 
+            width: 100%;
+            text-align: center; 
+            pointer-events: none; 
+            z-index: 5; /* 位于照片下方，背景之上 */
+        }
+        
+        h1.title-art {
+            font-size: 8vw; /* 响应式字号 */
+            font-weight: 100; /* 极细体，显高级 */
             margin: 0;
-            /* 璀璨金配色 */
-            color: #FFD700; 
-            /* 柔和的光晕效果 */
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2);
+            letter-spacing: 1.5rem; /* 极宽字间距 */
+            text-transform: uppercase;
+            /* 渐变金流光效果 */
+            background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fcf6ba, #bf953f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: shine 4s linear infinite, breathe 3s ease-in-out infinite;
+            opacity: 0.8;
         }
 
-        #status {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 0.9rem; background: rgba(255,255,255,0.1);
-            padding: 12px 30px; border-radius: 50px; backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.2); z-index: 100; transition: 0.3s;
-            white-space: nowrap;
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); filter: blur(0px); opacity: 0.7; }
+            50% { transform: scale(1.02); filter: blur(1px); opacity: 0.9; }
         }
-        .mode-firework { border-color: #ff4757; color: #ff4757; box-shadow: 0 0 20px rgba(255,71,87,0.3); }
-        .mode-star { border-color: #70a1ff; color: #70a1ff; box-shadow: 0 0 20px rgba(112,161,255,0.3); }
-        .mode-zoom { border-color: #ffd700; color: #ffd700; box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+
+        /* --- 状态栏设计 --- */
+        #status {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.7); font-size: 0.8rem; font-weight: 200;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 30px; border-radius: 50px; backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1); z-index: 100;
+            letter-spacing: 2px; transition: 0.4s;
+        }
+        .mode-firework { border-color: #ff4757; color: #ff4757; }
+        .mode-star { border-color: #70a1ff; color: #70a1ff; }
+        .mode-zoom { border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.1); }
+        
         video { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui"><h1 class="title-glow">Happy New Year 2026</h1></div>
+    <div id="ui">
+        <h1 class="title-art">2026</h1>
+        <div style="color: #fcf6ba; font-weight: 200; letter-spacing: 10px; margin-top: -10px; opacity: 0.5; font-size: 1.2vw;">HAPPY NEW YEAR</div>
+    </div>
     
-    <div id="status">手势神经同步中...</div>
+    <div id="status">系统初始化...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -81,21 +110,21 @@
                 if (this.alpha <= 0) return;
                 const p = project(this.x, this.y, this.z, rx, ry);
                 if (p.z < -300) return;
-                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.95)})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, p.s * 3), 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.9)})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, p.s * 2), 0, Math.PI * 2); ctx.fill();
             }
         }
 
         class Rocket {
             constructor() {
-                this.x = (Math.random()-0.5)*600; this.y = 800; this.z = (Math.random()-0.5)*600;
+                this.x = (Math.random()-0.5)*700; this.y = 800; this.z = (Math.random()-0.5)*700;
                 this.targetY = -100-Math.random()*400; this.hue = Math.random()*360; this.done = false;
             }
             update() { this.y -= 15; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
             draw(rx, ry) {
                 const p = project(this.x, this.y, this.z, rx, ry);
                 ctx.fillStyle = `rgba(255,255,255,${1 - zoomLerp})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
             }
             explode() { for (let i = 0; i < 60; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
         }
@@ -133,7 +162,7 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.6})`;
+            ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.5})`;
             ctx.fillRect(0, 0, w, h);
 
             const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
@@ -141,19 +170,16 @@
             if (isStarMode) galaxyTime++;
 
             ctx.globalCompositeOperation = 'lighter';
-            if (!isStarMode && Math.random() < 0.06 && rockets.length < 3) rockets.push(new Rocket());
+            if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
             rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
 
             if (photos.length === 13 && isStarMode) {
                 ctx.globalCompositeOperation = 'source-over';
-
                 let sensitivityRange = 0.5; 
                 let offset = (1.0 - sensitivityRange) / 2;
                 let normalizedX = (handX - offset) / sensitivityRange; 
-                
-                let targetIdx = normalizedX * 12;
-                targetIdx = Math.max(0, Math.min(12, targetIdx));
+                let targetIdx = Math.max(0, Math.min(12, normalizedX * 12));
 
                 currentFocusIndex += (targetIdx - currentFocusIndex) * 0.12;
                 zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.18;
@@ -163,9 +189,7 @@
                     let focusFactor = Math.max(0, 1 - distIdx * 0.4);
                     let isTarget = i === Math.round(currentFocusIndex);
                     
-                    let targetAlpha = isTarget ? 1.0 : 0.0;
-                    ctx.globalAlpha = (0.2 + focusFactor * 0.8) * (1 - zoomLerp) + targetAlpha * zoomLerp;
-
+                    ctx.globalAlpha = (0.2 + focusFactor * 0.8) * (1 - zoomLerp) + (isTarget ? zoomLerp : 0);
                     if (ctx.globalAlpha <= 0.01) return;
 
                     let zOff = 200 + (isTarget ? (zoomLerp * 300) : (zoomLerp * 1500));
@@ -192,10 +216,8 @@
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
-                    // 镜像处理坐标
                     handX = 1.0 - h[9].x; 
                     handY = h[9].y;
-                    
                     const palmSize = dist(h[0], h[9]);
                     const middleRatio = dist(h[12], h[0]) / palmSize;
                     const isHandOpen = middleRatio > 1.6;
@@ -204,16 +226,16 @@
 
                     if (isNowPinching) {
                         isPinching = true; isStarMode = true;
-                        status.innerText = "✨ 极致聚焦中"; status.className = "mode-zoom";
+                        status.innerText = "EXPLORING DETAIL"; status.className = "mode-zoom";
                     } else if (isHandOpen) {
                         isPinching = false; isStarMode = true;
-                        status.innerText = "🌌 星河照片墙"; status.className = "mode-star";
+                        status.innerText = "GALAXY GALLERY"; status.className = "mode-star";
                     } else {
                         isPinching = false; isStarMode = false;
-                        status.innerText = "🎆 烟火模式（握拳）"; status.className = "mode-firework";
+                        status.innerText = "FIREWORK MODE"; status.className = "mode-firework";
                     }
                 } else {
-                    status.innerText = "👋 请展示手势"; status.className = "";
+                    status.innerText = "WAITING FOR GESTURE"; status.className = "";
                 }
             });
 
