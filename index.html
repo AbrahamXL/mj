@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Interactive Gallery</title>
+    <title>2026 Fast Gallery</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -39,11 +39,12 @@
         let w, h, dpr, photos = [], bgStars = [], explosions = [], cakeParticles = [];
         let isHandVisible = false, isPinching = false, pointerPos = {x: 0, y: 0};
         let gatherLerp = 1, time = 0;
-        let selectedIdx = -1; // 当前选中的照片索引
+        let selectedIdx = -1;
 
         function resize() {
             w = window.innerWidth; h = window.innerHeight;
-            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            // 降低分辨率倍率以提升老旧机型流畅度
+            dpr = Math.min(window.devicePixelRatio || 1, 1.5);
             canvas.width = w * dpr; canvas.height = h * dpr;
             ctx.scale(dpr, dpr);
             initParticles();
@@ -51,23 +52,33 @@
 
         function initParticles() {
             bgStars = []; cakeParticles = [];
-            for(let i=0; i<100; i++) bgStars.push({x:(Math.random()-0.5)*w*3, y:(Math.random()-0.5)*h*3, z:Math.random()*1500, size:Math.random()*2, hue:210});
+            // 背景星减少到 50 个
+            for(let i=0; i<50; i++) bgStars.push({x:(Math.random()-0.5)*w*3, y:(Math.random()-0.5)*h*3, z:Math.random()*1500, size:Math.random()*1.5, hue:210});
             
-            const addP = (target, type) => {
-                cakeParticles.push({
-                    sx: (Math.random()-0.5)*w*2.5, sy: (Math.random()-0.5)*h*2.5, sz: Math.random()*1000,
-                    tx: target.x, ty: target.y, tz: target.z,
-                    color: type === 'rim' ? 'hsla(45,100%,80%,' : 'hsla(35,80%,70%,',
-                    size: (type==='rim'?2.5:1.5) + Math.random(),
-                    off: Math.random()*Math.PI*2,
-                    curZ: 0
-                });
+            const addP = (target, type, count) => {
+                for(let i=0; i<count; i++){
+                    let pt = target();
+                    cakeParticles.push({
+                        sx: (Math.random()-0.5)*w*2, sy: (Math.random()-0.5)*h*2, sz: Math.random()*800,
+                        tx: pt.x, ty: pt.y, tz: pt.z,
+                        color: type === 'rim' ? 'hsla(45,100%,80%,' : 'hsla(35,80%,70%,',
+                        // 粒子稍微大一点，弥补数量不足
+                        size: (type==='rim'?3:2) + Math.random()*1.5,
+                        curZ: 0
+                    });
+                }
             };
-            const getCyl = (r, b, t) => { let a=Math.random()*Math.PI*2, h=b+Math.random()*(t-b); return {x:Math.cos(a)*r, y:h, z:Math.sin(a)*r}; };
-            for(let i=0; i<1500; i++) addP(getCyl(180, 80, 200), 'base');
-            for(let i=0; i<800; i++) addP(getCyl(110, -30, 80), 'base');
-            for(let i=0; i<500; i++) addP(getCyl(60, -110, -30), 'base');
-            for(let i=0; i<300; i++) { let a=(i/300)*Math.PI*2; addP({x:Math.cos(a)*185, y:80, z:Math.sin(a)*185}, 'rim'); }
+
+            const getCyl = (r, b, t) => { 
+                let a=Math.random()*Math.PI*2, h=b+Math.random()*(t-b); 
+                return {x:Math.cos(a)*r, y:h, z:Math.sin(a)*r}; 
+            };
+
+            // 大幅精简粒子数：总计约 800 个
+            addP(() => getCyl(180, 80, 200), 'base', 400); // 底层
+            addP(() => getCyl(110, -30, 80), 'base', 250); // 中层
+            addP(() => getCyl(60, -110, -30), 'base', 150); // 顶层
+            addP(() => { let a=Math.random()*Math.PI*2; return {x:Math.cos(a)*185, y:80, z:Math.sin(a)*185}; }, 'rim', 80); // 装饰
         }
 
         function project(x, y, z) {
@@ -80,83 +91,74 @@
             ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = '#020205'; ctx.fillRect(0, 0, w, h);
 
-            // 逻辑：如果没看到手，或是捏合状态且没选中照片，就聚拢成蛋糕
-            let targetGather = (isHandVisible && !isPinching) ? 0 : (isPinching && selectedIdx !== -1 ? 0 : 1);
+            let isZooming = (isPinching && selectedIdx !== -1);
+            let targetGather = (isHandVisible && !isPinching) ? 0 : (isZooming ? 0 : 1);
             gatherLerp += (targetGather - gatherLerp) * 0.1;
 
             ctx.globalCompositeOperation = 'lighter';
-            // 背景与蛋糕粒子
             let rot = time * 0.5;
-            cakeParticles.sort((a,b)=>b.curZ - a.curZ);
+
+            // 粒子渲染
             cakeParticles.forEach(cp => {
                 let tx = cp.tx*Math.cos(rot) - cp.tz*Math.sin(rot);
                 let tz = cp.tx*Math.sin(rot) + cp.tz*Math.cos(rot);
                 let x = cp.sx + (tx - cp.sx) * gatherLerp;
                 let y = cp.sy + (cp.ty - cp.sy) * gatherLerp;
                 let z = cp.sz + (tz - cp.sz) * gatherLerp;
-                cp.curZ = z;
                 let p = project(x, y, z);
-                ctx.fillStyle = cp.color + (0.2+gatherLerp*0.7) + ')';
-                ctx.beginPath(); ctx.arc(p.x, p.y, cp.size*p.scale, 0, Math.PI*2); ctx.fill();
+                
+                // 仅在散开度高时做简单透明度变化，减少计算
+                ctx.fillStyle = cp.color + (0.3 + gatherLerp * 0.6) + ')';
+                ctx.beginPath(); ctx.arc(p.x, p.y, cp.size * p.scale, 0, Math.PI*2); ctx.fill();
             });
 
-            // 照片选择与放大逻辑
+            // 照片交互
             ctx.globalCompositeOperation = 'source-over';
             if (photos.length > 0) {
                 let vis = Math.max(0, 1 - gatherLerp * 1.5);
-                let minDist = 100;
                 let newSelected = -1;
+                let minDist = 80;
 
                 photos.forEach((pData, i) => {
                     let p = project(pData.seedX, pData.seedY, pData.seedZ);
-                    // 在散开模式下寻找距离指尖最近的照片
+                    
                     if (vis > 0.5 && isHandVisible && !isPinching) {
                         let d = Math.hypot(p.x - pointerPos.x, p.y - pointerPos.y);
                         if (d < minDist) { minDist = d; newSelected = i; }
                     }
 
-                    // 平滑过渡每张照片的选中状态
                     let isThisSelected = (selectedIdx === i);
-                    pData.selectLerp += (isThisSelected ? 1 : 0 - pData.selectLerp) * 0.15;
-                    // 平滑过渡放大状态
+                    pData.selectLerp += (isThisSelected ? 1 : 0 - pData.selectLerp) * 0.2;
                     let isZoomed = (isThisSelected && isPinching);
-                    pData.zoomLerp += (isZoomed ? 1 : 0 - pData.zoomLerp) * 0.1;
+                    pData.zoomLerp += (isZoomed ? 1 : 0 - pData.zoomLerp) * 0.12;
 
                     if (vis > 0.01 || pData.zoomLerp > 0.01) {
                         ctx.save();
-                        // 放大时背景照片变淡
-                        let finalAlpha = vis * 0.8 * (1 - pData.zoomLerp);
-                        if (isThisSelected) finalAlpha = Math.max(finalAlpha, pData.zoomLerp || pData.selectLerp*0.9);
+                        ctx.globalAlpha = vis * 0.8 * (1 - pData.zoomLerp);
+                        if (isThisSelected) ctx.globalAlpha = Math.max(ctx.globalAlpha, pData.zoomLerp || pData.selectLerp);
                         
-                        ctx.globalAlpha = finalAlpha;
-                        
-                        // 计算位置：如果是放大状态，向屏幕中心位移
                         let curX = p.x + (w/2 - p.x) * pData.zoomLerp;
                         let curY = p.y + (h/2 - p.y) * pData.zoomLerp;
                         ctx.translate(curX, curY);
 
-                        // 缩放控制：基础 + 选中微增 + 捏合剧增
-                        let s = p.scale * (0.28 + pData.selectLerp*0.1 + pData.zoomLerp*2.5);
+                        let s = p.scale * (0.3 + pData.selectLerp*0.1 + pData.zoomLerp*2.2);
                         ctx.drawImage(pData.img, -pData.img.width*s/2, -pData.img.height*s/2, pData.img.width*s, pData.img.height*s);
                         
-                        // 装饰框
                         if (pData.selectLerp > 0.1) {
                             ctx.strokeStyle = `rgba(255,215,0,${pData.selectLerp})`;
-                            ctx.lineWidth = 2 + pData.zoomLerp*5;
+                            ctx.lineWidth = 2;
                             ctx.strokeRect(-pData.img.width*s/2, -pData.img.height*s/2, pData.img.width*s, pData.img.height*s);
                         }
                         ctx.restore();
                     }
                 });
-                selectedIdx = newSelected !== -1 ? newSelected : (isPinching ? selectedIdx : -1);
+                if (!isPinching) selectedIdx = newSelected;
             }
 
-            // 绘制指尖光点
+            // 仅在必要时绘制指尖
             if (isHandVisible && gatherLerp < 0.5) {
-                ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = '#fff';
-                ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 15;
-                ctx.beginPath(); ctx.arc(pointerPos.x, pointerPos.y, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(pointerPos.x, pointerPos.y, 4, 0, Math.PI*2); ctx.fill();
             }
 
             requestAnimationFrame(animate);
@@ -164,19 +166,17 @@
 
         async function initAI() {
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+            // 降低模型复杂度以提升速度
             hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
-                    // 映射指尖坐标 (lm[8] 是食指尖)
                     pointerPos.x = (1 - lm[8].x) * w;
                     pointerPos.y = lm[8].y * h;
-                    isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.06;
-                    document.getElementById('status').innerText = isPinching ? "✨ 锁定视野" : "☝️ 移动指尖选择照片";
+                    isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.07;
                 } else {
                     isHandVisible = false; isPinching = false;
-                    document.getElementById('status').innerText = "👀 等待指令...";
                 }
             });
 
@@ -184,10 +184,8 @@
                 onFrame: async () => { await hands.send({image: document.getElementById('v')}); },
                 width: 320, height: 240
             });
-            cam.start().catch(() => {
-                document.getElementById('status').innerText = "⚠️ 点击授权开启庆典";
-                window.addEventListener('click', ()=>cam.start(), {once:true});
-            });
+            cam.start();
+            document.getElementById('status').innerText = "☝️ 移动指尖选择，捏合放大";
         }
 
         resize();
@@ -198,7 +196,7 @@
             img.onload = () => {
                 photos.push({
                     img, selectLerp: 0, zoomLerp: 0,
-                    seedX: (Math.random()-0.5)*w*1.5, seedY: (Math.random()-0.5)*h*1.5, seedZ: 200 + Math.random()*400
+                    seedX: (Math.random()-0.5)*w*1.4, seedY: (Math.random()-0.5)*h*1.4, seedZ: 300 + Math.random()*300
                 });
                 if(++loaded === totalPhotos) { initAI(); animate(); }
             };
