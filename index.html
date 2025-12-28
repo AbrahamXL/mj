@@ -2,59 +2,52 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Best wishes - 艺术交互装置</title>
+    <title>Best Wishes - 交互影像装置</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,600&family=Montserrat:wght@300&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
         #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0a0a1a 0%, #000 100%); }
         
-        /* --- 艺术文字重新设计 --- */
         #title-container {
-            position: absolute; top: 15%; width: 100%; text-align: center;
-            pointer-events: none; z-index: 10;
+            position: absolute; top: 10%; width: 100%; text-align: center;
+            pointer-events: none; z-index: 10; transition: opacity 0.5s;
         }
 
         #main-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 5.5rem;
-            font-style: italic;
-            margin: 0;
-            line-height: 1;
-            /* 豪华金色流光 */
-            background: linear-gradient(75deg, 
-                rgba(255,215,0,1) 0%, 
-                rgba(255,255,255,1) 45%, 
-                rgba(255,215,0,1) 55%, 
-                rgba(255,215,0,1) 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite;
-            filter: drop-shadow(0 0 20px rgba(255,215,0,0.35));
+            font-family: 'Playfair Display', serif; font-size: 4.5rem; font-style: italic; margin: 0;
+            background: linear-gradient(75deg, #ffd700 0%, #fff 45%, #ffd700 55%, #ffd700 100%);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite; filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
         }
 
-        @keyframes shine {
-            to { background-position: 200% center; }
-        }
+        @keyframes shine { to { background-position: 200% center; } }
 
-        /* --- 交互说明条 --- */
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); 
-            padding: 10px 40px; border-radius: 50px;
-            border: 1px solid rgba(255,215,0,0.2); backdrop-filter: blur(20px);
-            font-size: 0.85rem; z-index: 10; letter-spacing: 2px;
+            color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.4); 
+            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.3);
+            backdrop-filter: blur(15px); font-size: 0.9rem; z-index: 100; letter-spacing: 1px;
         }
+        
+        /* 准心，辅助用户选择 */
+        #reticle {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 20px; height: 20px; border: 2px solid rgba(255,215,0,0.5);
+            border-radius: 50%; pointer-events: none; z-index: 50;
+            display: none; /* 初始隐藏 */
+        }
+
         #video-input { display: none; }
     </style>
 </head>
 <body>
+    <div id="reticle"></div>
     <div id="title-container">
-        <h1 id="main-title">Best wishes</h1>
+        <h1 id="main-title">Eternal Memories</h1>
     </div>
     
     <div id="container">
-        <div id="info-instructions">正在唤醒冬日魔法...</div>
+        <div id="info-instructions">正在启动冬日魔法...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -63,32 +56,26 @@
     <script src="https://unpkg.com/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        let scene, camera, renderer, particleSystem, mainGroup, snowSystem;
-        let treePos = [], starPos = [], currentPos = [], snowData = [];
-        let currentColors = [], targetColors = [];
-        let isChangingColor = false, colorStartTime = 0;
-        let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0, windForce = 0, lastColorChange = 0;
+        let scene, camera, renderer, particleSystem, mainGroup, snowSystem, imageGroup;
+        let treePos = [], starPos = [], currentPos = [], targetColors = [], currentColors = [];
+        let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
+        let lastColorChange = 0, isChangingColor = false, colorStartTime = 0;
+        let selectedImage = null, zoomedImage = null;
 
-        const COUNT = 3500; 
-        const SNOW_COUNT = 800;
-        // 定义装饰品的起始索引，用于后续变色逻辑
-        const DECO_START_INDEX = COUNT - 600; 
-
-        const colorThemes = [
-            [0xffd700, 0xff0000, 0xffffff, 0xff0055], 
-            [0x00f2ff, 0x0066ff, 0xaa00ff, 0xffffff], 
-            [0xff00ff, 0x00ff88, 0xffd700, 0x00ccff], 
-        ];
+        const COUNT = 3500;
+        const IMG_COUNT = 10;
+        const colorThemes = [[0xffd700, 0xff0000, 0xffffff], [0x00f2ff, 0x0066ff, 0xffffff], [0xff00ff, 0x00ff88, 0x00ccff]];
         let currentThemeIdx = 0;
+
+        // 占位图片 URL (您可以替换为自己的图片)
+        const imageUrls = Array.from({length: 10}, (_, i) => `https://picsum.photos/id/${i+20}/400/600`);
 
         function createStarTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.3, 'rgba(255,230,150,0.9)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            grad.addColorStop(0, 'white'); grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
         }
@@ -96,208 +83,190 @@
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
-            camera.position.z = 45;
+            camera.position.z = 50;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('container').appendChild(renderer.domElement);
 
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
+            // 1. 初始化图片组
+            imageGroup = new THREE.Group();
+            mainGroup.add(imageGroup);
+            const loader = new THREE.TextureLoader();
+            
+            for(let i=0; i<IMG_COUNT; i++) {
+                const geometry = new THREE.PlaneGeometry(6, 9);
+                const material = new THREE.MeshBasicMaterial({ 
+                    map: loader.load(imageUrls[i]), 
+                    transparent: true, 
+                    opacity: 0,
+                    side: THREE.DoubleSide 
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // 环绕分布在蛋糕内部
+                const angle = (i / IMG_COUNT) * Math.PI * 2;
+                const radius = 15;
+                mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+                mesh.lookAt(0, 0, 0); // 让图片面向中心
+                mesh.userData = { originalPos: mesh.position.clone(), originalRot: mesh.rotation.clone() };
+                imageGroup.add(mesh);
+            }
+
+            // 2. 初始化粒子系统 (蛋糕逻辑)
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
-
-            // 定义蛋糕的层级参数 (半径, 高度, 基底Y坐标)
-            const tiers = [
-                { r: 12, h: 5.5, y: -10 }, // 底层
-                { r: 8.5, h: 5.5, y: -4.5 }, // 中层
-                { r: 5,  h: 5.5, y: 1.0 }   // 顶层
-            ];
+            const tiers = [{ r: 12, h: 5.5, y: -10 }, { r: 8.5, h: 5.5, y: -4.5 }, { r: 5, h: 5.5, y: 1.0 }];
 
             for(let i=0; i<COUNT; i++) {
                 let vTree = new THREE.Vector3();
                 let pColor = new THREE.Color();
-
-                // --- 构建蛋糕形状 ---
-                if (i < DECO_START_INDEX) {
-                    // === 蛋糕主体 (奶油和糖霜层) ===
-                    let tierIdx = 0;
-                    // 根据索引分配到不同的层
-                    if (i > DECO_START_INDEX * 0.45) tierIdx = 1;
-                    if (i > DECO_START_INDEX * 0.8) tierIdx = 2;
-
-                    const t = tiers[tierIdx];
-                    const angle = Math.random() * Math.PI * 2;
-                    let r, y, colorHex;
-
-                    // 决定是做侧壁还是做顶部糖霜平面
-                    if (Math.random() > 0.3) {
-                        // 侧壁 (蛋糕体) - 稍微加一点随机抖动让它看起来松软
-                        r = t.r * (0.96 + Math.random() * 0.08);
-                        y = t.y + Math.random() * t.h;
-                        // 基础奶油色，带一点点变化
-                        colorHex = (i % 3 === 0) ? 0xFFFDD0 : 0xFFF8E7; 
-                    } else {
-                        // 顶部平面 (白色糖霜层) - 均匀分布在圆盘上
-                        r = Math.sqrt(Math.random()) * t.r * 1.03; // 稍微比侧壁宽一点点
-                        y = t.y + t.h + (Math.random()-0.5)*0.3;
-                        colorHex = 0xFFFFFF; // 纯白糖霜
-                    }
-                    vTree.set(r * Math.cos(angle), y, r * Math.sin(angle));
-                    pColor.setHex(colorHex);
-
+                let tierIdx = i < COUNT*0.4 ? 0 : (i < COUNT*0.8 ? 1 : 2);
+                const t = tiers[tierIdx];
+                const angle = Math.random() * Math.PI * 2;
+                
+                if (Math.random() > 0.3) {
+                    const r = t.r * (0.95 + Math.random()*0.1);
+                    vTree.set(r * Math.cos(angle), t.y + Math.random()*t.h, r * Math.sin(angle));
+                    pColor.setHex(0xFFFDD0);
                 } else {
-                    // === 装饰品 (位于DECO_START_INDEX之后) ===
-                    // 随机分布在各层的边缘或者最顶层的中心
-                    const tierIdx = Math.floor(Math.random() * tiers.length);
-                    const t = tiers[tierIdx];
-                    const angle = Math.random() * Math.PI * 2;
-                    let r, y;
-
-                    // 如果在最顶层，有概率放在中间做蜡烛/顶部装饰
-                    if (tierIdx === tiers.length - 1 && Math.random() > 0.6) {
-                         r = Math.sqrt(Math.random()) * t.r * 0.6; // 靠近中心
-                         y = t.y + t.h + Math.random() * 3 + 0.5; // 稍微高一点
-                    } else {
-                        // 放在各层的边缘做裱花/糖珠装饰
-                         r = t.r * (1.02 + Math.random()*0.1);
-                         y = t.y + t.h + Math.random()*0.8;
-                    }
-
-                    vTree.set(r * Math.cos(angle), y, r * Math.sin(angle));
-                    // 装饰品使用当前主题颜色
-                    pColor.setHex(colorThemes[0][i % 4]);
+                    const r = Math.sqrt(Math.random()) * t.r;
+                    vTree.set(r * Math.cos(angle), t.y + t.h, r * Math.sin(angle));
+                    pColor.setHex(0xFFFFFF);
                 }
 
-                // 保持原有的炸开/星空位置逻辑
                 treePos.push(vTree);
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(25 + Math.random() * 30, Math.random() * Math.PI, Math.random() * Math.PI * 2));
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(30 + Math.random()*20, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(vTree.clone());
-                currentColors.push(pColor.clone());
                 targetColors.push(pColor.clone());
-                
+                currentColors.push(pColor.clone());
                 posArr[i*3] = vTree.x; posArr[i*3+1] = vTree.y; posArr[i*3+2] = vTree.z;
                 colArr[i*3] = pColor.r; colArr[i*3+1] = pColor.g; colArr[i*3+2] = pColor.b;
             }
 
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-            particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({
-                size: 0.75, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false
-            }));
+            particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.6, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false }));
             mainGroup.add(particleSystem);
 
-            // 雪花系统保持不变
+            // 雪花
             const snowGeo = new THREE.BufferGeometry();
-            const snowPositions = new Float32Array(SNOW_COUNT * 3);
-            for(let i=0; i<SNOW_COUNT; i++) {
-                snowPositions[i*3] = (Math.random()-0.5)*100;
-                snowPositions[i*3+1] = Math.random()*60 - 30;
-                snowPositions[i*3+2] = (Math.random()-0.5)*100;
-                snowData.push({ velY: -0.05 - Math.random()*0.1, velX: (Math.random()-0.5)*0.05 });
-            }
-            snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
-            snowSystem = new THREE.Points(snowGeo, new THREE.PointsMaterial({
-                size: 0.4, color: 0xffffff, transparent: true, opacity: 0.5, map: createStarTexture(), blending: THREE.AdditiveBlending, depthWrite: false
-            }));
+            const snowPosArr = new Float32Array(800 * 3);
+            for(let i=0; i<800*3; i++) snowPosArr[i] = (Math.random()-0.5)*100;
+            snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPosArr, 3));
+            snowSystem = new THREE.Points(snowGeo, new THREE.PointsMaterial({ size: 0.3, color: 0xffffff, transparent: true, opacity: 0.5 }));
             scene.add(snowSystem);
 
             animate();
         }
 
-        function handleThemeChange() {
-            currentThemeIdx = (currentThemeIdx + 1) % colorThemes.length;
-            const newTheme = colorThemes[currentThemeIdx];
-            colorStartTime = Date.now();
-            isChangingColor = true;
-            
-            // 修改变色逻辑：只改变蛋糕上的装饰品部分
-            for(let i=0; i<COUNT; i++) {
-                if (i >= DECO_START_INDEX) {
-                    targetColors[i].setHex(newTheme[i % newTheme.length]);
-                }
-            }
-            lastColorChange = Date.now();
-        }
+        const raycaster = new THREE.Raycaster();
+        const centerScreen = new THREE.Vector2(0, 0); // 屏幕中心
 
         function animate() {
             requestAnimationFrame(animate);
             const now = Date.now();
             
-            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.08); 
-            mainGroup.rotation.y += 0.003;
+            // 平滑形态过渡
+            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.05);
+            mainGroup.rotation.y += 0.002;
             mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY, 0.05);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.05);
 
-            // 增强版文字视差
-            const title = document.getElementById('title-container');
-            title.style.transform = `translate(${targetRotY * 12}px, ${-targetRotX * 6}px)`;
+            // 更新图片显示逻辑
+            imageGroup.visible = morphFactor > 0.1;
+            document.getElementById('reticle').style.display = (morphFactor > 0.5 && !zoomedImage) ? 'block' : 'none';
 
+            imageGroup.children.forEach((mesh, i) => {
+                if (zoomedImage === mesh) {
+                    // 放大状态：固定在相机前
+                    const targetPos = new THREE.Vector3(0, 0, 35);
+                    mesh.position.lerp(targetPos, 0.1);
+                    mesh.rotation.set(0, 0, 0);
+                    mesh.material.opacity = 1;
+                } else if (zoomedImage) {
+                    // 其他图片在放大期间消失
+                    mesh.material.opacity = THREE.MathUtils.lerp(mesh.material.opacity, 0, 0.1);
+                } else {
+                    // 正常状态：随 morphFactor 显现
+                    mesh.material.opacity = THREE.MathUtils.lerp(0, 0.8, (morphFactor - 0.3) * 2);
+                    mesh.scale.setScalar(morphFactor);
+                    // 恢复原始位置
+                    mesh.position.lerp(mesh.userData.originalPos, 0.05);
+                }
+            });
+
+            // 射线检测：选择中心图片
+            if (morphFactor > 0.5 && !zoomedImage) {
+                raycaster.setFromCamera(centerScreen, camera);
+                const intersects = raycaster.intersectObjects(imageGroup.children);
+                if (intersects.length > 0) {
+                    if (selectedImage !== intersects[0].object) {
+                        if (selectedImage) selectedImage.scale.setScalar(1);
+                        selectedImage = intersects[0].object;
+                        selectedImage.scale.setScalar(1.2); // 高亮放大
+                    }
+                } else {
+                    if (selectedImage) selectedImage.scale.setScalar(1);
+                    selectedImage = null;
+                }
+            }
+
+            // 更新粒子
             const posAttr = particleSystem.geometry.attributes.position;
-            const colAttr = particleSystem.geometry.attributes.color;
-            let cAlpha = Math.min((now - colorStartTime) / 1200, 1.0);
-
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 posAttr.array[i*3] = currentPos[i].x;
-                // 蛋糕不需要像树一样有那种特定的呼吸摆动，稍微减弱一点
-                posAttr.array[i*3+1] = currentPos[i].y + (i >= DECO_START_INDEX ? Math.sin(now*0.002+i)*0.05 : 0);
+                posAttr.array[i*3+1] = currentPos[i].y + Math.sin(now*0.001+i)*0.02;
                 posAttr.array[i*3+2] = currentPos[i].z;
-
-                if (isChangingColor) {
-                    const c = currentColors[i].clone().lerp(targetColors[i], cAlpha);
-                    colAttr.array[i*3] = c.r; colAttr.array[i*3+1] = c.g; colAttr.array[i*3+2] = c.b;
-                    if (cAlpha >= 1 && i === COUNT-1) isChangingColor = false;
-                }
             }
-            
-            const sPos = snowSystem.geometry.attributes.position;
-            windForce = THREE.MathUtils.lerp(windForce, targetRotY * 0.03, 0.05);
-            for(let i=0; i<SNOW_COUNT; i++) {
-                sPos.array[i*3+1] -= 0.08;
-                sPos.array[i*3] += windForce;
-                if(sPos.array[i*3+1] < -30) sPos.array[i*3+1] = 30;
-                if(sPos.array[i*3] > 50) sPos.array[i*3] = -50;
-                if(sPos.array[i*3] < -50) sPos.array[i*3] = 50;
-            }
+            posAttr.needsUpdate = true;
 
-            posAttr.needsUpdate = true; colAttr.needsUpdate = true; sPos.needsUpdate = true;
             renderer.render(scene, camera);
         }
 
+        // 手势逻辑：捏合确定放大
         async function startAI() {
             const info = document.getElementById('info-instructions');
             const hands = new Hands({ locateFile: (file) => `https://unpkg.com/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.75 });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7 });
             
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
-                    const wrist = h[0];
-                    const fingers = [8, 12, 16, 20];
-                    let extendedFingers = 0;
-
-                    fingers.forEach(tipIdx => {
-                        const distTip = Math.hypot(h[tipIdx].x - wrist.x, h[tipIdx].y - wrist.y);
-                        const distMcp = Math.hypot(h[tipIdx-3].x - wrist.x, h[tipIdx-3].y - wrist.y);
-                        if (distTip > distMcp * 1.2) extendedFingers++;
-                    });
-
-                    targetMorph = extendedFingers / 4; 
-
-                    const distPinch = Math.hypot(h[4].x - h[8].x, h[4].y - h[8].y);
-                    const palmSize = Math.hypot(h[0].x - h[5].x, h[0].y - h[5].y);
-                    if (distPinch / palmSize < 0.4 && (Date.now() - lastColorChange > 2000)) handleThemeChange();
-
-                    targetRotY = (0.5 - h[9].x) * 12; 
-                    targetRotX = (h[9].y - 0.5) * 6;
                     
-                    info.innerHTML = `🖐️ 张合控制爆发 (${extendedFingers}) | 👌 捏合变换色彩`;
-                } else {
-                    info.innerText = "✨ 请展示您的手掌开启魔法互动";
+                    // 1. 张开度控制 (食指中指无名指小指)
+                    const fingers = [8, 12, 16, 20];
+                    let openCount = 0;
+                    fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
+                    targetMorph = openCount / 4;
+
+                    // 2. 视角转动
+                    targetRotY = (0.5 - h[9].x) * 10;
+                    targetRotX = (h[9].y - 0.5) * 5;
+
+                    // 3. 捏合检测 (食指与大拇指)
+                    const distPinch = Math.hypot(h[4].x - h[8].x, h[4].y - h[8].y);
+                    if (distPinch < 0.05) {
+                        if (selectedImage && !zoomedImage) {
+                            zoomedImage = selectedImage; // 确定放大
+                            info.innerHTML = "✨ 已聚焦图片 | 再次张开手掌还原";
+                        }
+                    }
+
+                    // 4. 还原检测 (手掌全张开且已经放大时)
+                    if (openCount >= 3 && zoomedImage && distPinch > 0.15) {
+                        zoomedImage = null;
+                    }
+
+                    if(!zoomedImage) {
+                        info.innerHTML = morphFactor < 0.5 ? "🖐️ 张开手掌散开蛋糕" : "🎯 转动视角并【捏合】选择图片";
+                    }
                 }
             });
 
