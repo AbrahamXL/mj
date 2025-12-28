@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 Elegant Galaxy</title>
+    <title>2026 Radiant Celebration</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; }
@@ -14,20 +14,59 @@
             transform: translate(-50%, -50%); width: 100%; text-align: center; 
             pointer-events: none; z-index: 5; transition: transform 0.2s ease-out; 
         }
+
+        /* --- 【核心修改：让 2026 彻底醒目】 --- */
         .year-display {
-            font-size: 15vw; font-weight: 700; line-height: 0.8; margin: 0; letter-spacing: -0.5rem;
-            color: transparent; -webkit-text-stroke: 1px rgba(255, 215, 0, 0.3); opacity: 0.6;
+            font-size: 18vw; /* 稍微放大一点 */
+            font-weight: 700;
+            line-height: 0.8;
+            margin: 0;
+            letter-spacing: -0.2rem;
+            
+            /* 柔和的填充色，既显眼又通透 */
+            color: rgba(255, 255, 255, 0.85); 
+            
+            /* 金色描边增强质感 */
+            -webkit-text-stroke: 2px rgba(255, 215, 0, 0.5);
+            
+            /* 多层光晕叠加：白光+金光 */
+            text-shadow: 
+                0 0 20px rgba(255, 255, 255, 0.4),
+                0 0 40px rgba(255, 215, 0, 0.3),
+                0 0 80px rgba(255, 215, 0, 0.2);
+            
+            animation: textPulse 4s ease-in-out infinite;
         }
+
+        @keyframes textPulse {
+            0%, 100% { 
+                opacity: 0.7; 
+                transform: scale(1);
+                filter: brightness(1);
+            }
+            50% { 
+                opacity: 0.95; 
+                transform: scale(1.02);
+                filter: brightness(1.3);
+                text-shadow: 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(255, 215, 0, 0.5);
+            }
+        }
+
         .sub-title {
-            font-family: 'Playfair Display', serif; font-style: italic; font-size: 2.5vw; color: #fff;
-            letter-spacing: 0.5rem; margin-top: 1rem; text-shadow: 0 0 15px rgba(255,255,255,0.4);
-            background: linear-gradient(90deg, transparent, #fff, transparent); background-size: 80% 100%;
-            background-repeat: no-repeat; -webkit-background-clip: text; animation: shimmer 5s infinite linear;
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 3vw;
+            color: #fff;
+            letter-spacing: 0.8rem;
+            margin-top: 1.5rem;
+            opacity: 0.9;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8); /* 增加投影确保在星星背景上清晰 */
         }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        /* -------------------------------------- */
+
         #status {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.3); font-size: 0.6rem; letter-spacing: 4px; z-index: 100;
+            color: rgba(255,255,255,0.4); font-size: 0.6rem; letter-spacing: 4px; z-index: 100;
         }
         video { display: none; }
     </style>
@@ -37,7 +76,7 @@
         <h1 class="year-display">2026</h1>
         <div class="sub-title">Happy New Year</div>
     </div>
-    <div id="status">Interactive Mode</div>
+    <div id="status">Interactive Gallery</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -58,23 +97,14 @@
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue;
-                
-                // --- 【修改点1】更稀疏、更开阔的星系分布 ---
                 const rFactor = Math.random();
-                // 增加最小半径(400)，确保照片周围有足够的空隙
-                this.orbitRadius = 400 + (rFactor * rFactor) * 1200; 
+                this.orbitRadius = 450 + (rFactor * rFactor) * 1150; 
                 this.orbitAngle = Math.random() * Math.PI * 2;
-                this.orbitSpeed = (Math.random() - 0.5) * 0.0015;
-
-                // --- 【修改点2】大小差异化 ---
-                // 有的是 0.5px 的微尘，有的是 2.5px 的亮星
-                this.baseSize = 0.5 + Math.random() * 2.0;
-                
-                // --- 【修改点3】个性化透明度 ---
-                this.baseAlpha = 0.3 + Math.random() * 0.7;
+                this.orbitSpeed = (Math.random() - 0.5) * 0.0012;
+                this.baseSize = 0.4 + Math.random() * 2.0;
+                this.baseAlpha = 0.2 + Math.random() * 0.6;
                 this.alpha = 1;
-
-                this.baseY = (Math.random() - 0.5) * 400 * (1 - rFactor * 0.7);
+                this.baseY = (Math.random() - 0.5) * 380 * (1 - rFactor * 0.7);
 
                 const v = 5 + Math.random() * 10; 
                 const ang = Math.random() * Math.PI * 2;
@@ -88,18 +118,14 @@
                     let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
                     const targetX = this.orbitRadius * Math.cos(ang);
                     const targetZ = this.orbitRadius * Math.sin(ang);
-                    const targetY = this.baseY + Math.sin(ang * 2) * 50;
-
+                    const targetY = this.baseY + Math.sin(ang * 2) * 40;
                     this.x += (targetX - this.x) * 0.04;
                     this.z += (targetZ - this.z) * 0.04;
                     this.y += (targetY - this.y) * 0.04; 
-
-                    // 呼吸感
                     this.alpha = this.baseAlpha * (0.6 + Math.sin(galaxyTime * 0.03 + this.orbitRadius) * 0.4);
                 } else {
                     this.vx *= 0.975; this.vy *= 0.975; this.vz *= 0.975; 
-                    this.vy += 0.06; 
-                    this.x += this.vx; this.y += this.vy; this.z += this.vz;
+                    this.vy += 0.06; this.x += this.vx; this.y += this.vy; this.z += this.vz;
                     this.alpha -= 0.007; 
                 }
             }
@@ -107,10 +133,8 @@
                 if (this.alpha <= 0) return;
                 const p = project(this.x, this.y, this.z, rx, ry);
                 if (p.z < -400) return;
-                
                 ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha})`;
                 ctx.beginPath(); 
-                // 使用每颗星星特有的基础大小
                 ctx.arc(p.x, p.y, Math.max(0.4, p.s * this.baseSize), 0, Math.PI * 2); 
                 ctx.fill();
             }
@@ -121,7 +145,7 @@
                 this.x = (Math.random()-0.5)*800; this.y = 800; this.z = (Math.random()-0.5)*800;
                 this.targetY = -150-Math.random()*450; 
                 this.done = false;
-                const warmPalettes = [40, 30, 20, 10]; // 暖色锁定
+                const warmPalettes = [45, 30, 15]; 
                 let baseHue = warmPalettes[Math.floor(Math.random() * warmPalettes.length)];
                 this.hue = baseHue + (Math.random() - 0.5) * 15;
             }
@@ -132,12 +156,8 @@
                 ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
             }
             explode() { 
-                // --- 【修改点4】减少单次爆炸粒子数 ---
-                for (let i = 0; i < 100; i++) {
-                    particles.push(new Particle(this.x, this.y, this.z, this.hue));
-                }
-                // 限制总粒子数，防止无限堆叠导致密集
-                if (particles.length > 800) particles.splice(0, 100);
+                for (let i = 0; i < 90; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue));
+                if (particles.length > 700) particles.splice(0, 90);
             }
         }
 
@@ -174,18 +194,19 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = `rgba(0,0,5,${0.25 + zoomLerp * 0.3})`; // 更通透的黑
+            ctx.fillStyle = `rgba(0,0,5,${0.25 + zoomLerp * 0.3})`;
             ctx.fillRect(0, 0, w, h);
             
             const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
             const rotX = (handY - 0.5) * (1 - zoomLerp * 0.95);
-            uiElement.style.transform = `translate(${-50 + (handX-0.5)*4}%, ${-50 + (handY-0.5)*4}%)`;
+            
+            // 保持微小的视差移动
+            uiElement.style.transform = `translate(${-50 + (handX-0.5)*3}%, ${-50 + (handY-0.5)*3}%)`;
 
             if (isStarMode) galaxyTime++;
 
             ctx.globalCompositeOperation = 'lighter';
-            if (!isStarMode && Math.random() < 0.06 && rockets.length < 4) rockets.push(new Rocket());
-            
+            if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
             rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
 
@@ -195,7 +216,6 @@
                 let offset = (1.0 - sensitivityRange) / 2;
                 let normalizedX = (handX - offset) / sensitivityRange; 
                 let targetIdx = Math.max(0, Math.min(12, normalizedX * 12));
-
                 currentFocusIndex += (targetIdx - currentFocusIndex) * 0.12;
                 zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.18;
 
@@ -203,7 +223,6 @@
                     let distIdx = Math.abs(i - currentFocusIndex);
                     let focusFactor = Math.max(0, 1 - distIdx * 0.4);
                     let isTarget = i === Math.round(currentFocusIndex);
-                    
                     ctx.globalAlpha = (0.2 + focusFactor * 0.8) * (1 - zoomLerp) + (isTarget ? zoomLerp : 0);
                     if (ctx.globalAlpha <= 0.01) return;
 
@@ -212,11 +231,7 @@
                     let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 1.0 : 0);
                     let iw = pData.img.width * p.s * scale * 0.28;
                     let ih = pData.img.height * p.s * scale * 0.28;
-
-                    if (isTarget && zoomLerp > 0.1) { 
-                        ctx.shadowBlur = 30 * zoomLerp; 
-                        ctx.shadowColor = "rgba(255,255,255,0.5)"; 
-                    }
+                    if (isTarget && zoomLerp > 0.1) { ctx.shadowBlur = 30 * zoomLerp; ctx.shadowColor = "rgba(255,255,255,0.5)"; }
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
                     ctx.shadowBlur = 0;
                 });
@@ -233,10 +248,8 @@
                     const h = res.multiHandLandmarks[0];
                     handX = 1.0 - h[9].x; handY = h[9].y;
                     const palmSize = dist(h[0], h[9]);
-                    const middleRatio = dist(h[12], h[0]) / palmSize;
-                    const isHandOpen = middleRatio > 1.6;
-                    const pinchGap = dist(h[8], h[4]) / palmSize;
-                    const isNowPinching = isHandOpen && pinchGap < 0.45; 
+                    const isHandOpen = dist(h[12], h[0]) / palmSize > 1.6;
+                    const isNowPinching = isHandOpen && dist(h[8], h[4]) / palmSize < 0.45; 
                     isStarMode = isHandOpen; isPinching = isNowPinching;
                 }
             });
