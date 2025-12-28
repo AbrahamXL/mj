@@ -3,38 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Gallery Corner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <title>2026 Live Gallery</title>
     <style>
         * { box-sizing: border-box; }
-        html, body { 
-            width: 100%; height: 100%; margin: 0; padding: 0; 
-            overflow: hidden; background: #000; position: fixed; 
-        }
-        canvas { 
-            position: absolute; top: 0; left: 0;
-            width: 100% !important; height: 100% !important;
-            display: block; 
-        }
-        /* UI 挪到左上角 */
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; position: fixed; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+        
+        /* UI 绝对定位在左上角 */
         #ui { 
-            position: absolute; top: 20px; left: 20px; 
-            text-align: left; pointer-events: none; z-index: 10;
+            position: absolute; top: 30px; left: 20px; 
+            z-index: 10; pointer-events: none;
+            font-family: sans-serif;
         }
-        .year-display {
-            font-size: 12vw; font-weight: 700; color: rgba(255, 255, 255, 0.2);
-            -webkit-text-stroke: 1px rgba(255, 215, 0, 0.3); margin: 0;
+        .year { 
+            font-size: 14vw; font-weight: 900; color: rgba(255,215,0,0.3);
+            margin: 0; line-height: 1;
         }
         #status {
-            position: absolute; top: 12vw; left: 22px;
-            color: rgba(255,255,255,0.5); font-size: 0.6rem; letter-spacing: 2px;
+            margin-top: 10px; color: #fff; font-size: 12px;
+            background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;
+            display: inline-block; letter-spacing: 1px;
         }
         video { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui"><h1 class="year-display">2026</h1></div>
-    <div id="status">TAP TO START</div>
+    <div id="ui">
+        <h1 class="year">2026</h1>
+        <div id="status">点击屏幕开始交互</div>
+    </div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -42,122 +39,146 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        const folderName = "mj"; 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
-        let w, h, dpr, photos = [], particles = [], rockets = [];
-        let isStarMode = false, isPinching = false, handX = 0, handY = 0;
-        let zoomLerp = 0, currentFocusIndex = 0;
+        const statusEl = document.getElementById('status');
+        let w, h, dpr, photos = [], particles = [];
+        let handX = 0, handY = 0, isHandVisible = false, isPinching = false;
+        let globalTime = 0;
 
         function resize() {
             w = window.innerWidth; h = window.innerHeight;
             dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.floor(w * dpr);
-            canvas.height = Math.floor(h * dpr);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
+            canvas.width = w * dpr; canvas.height = h * dpr;
+            ctx.scale(dpr, dpr);
         }
 
-        // 核心修改：投影中心点改在左上角 (80, 150)
-        function project(x, y, z, rx, ry) {
-            let x1 = x * Math.cos(ry) - z * Math.sin(ry);
-            let z1 = x * Math.sin(ry) + z * Math.cos(ry);
-            let y2 = y * Math.cos(rx) - z1 * Math.sin(rx);
-            let z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
-            
-            const fov = 600; 
-            const s = fov / (fov + z2 + 500); 
-            // 锚点设置在左上角区域
-            return { x: x1 * s + 100, y: y2 * s + 250, s };
-        }
-
-        class Particle {
-            constructor(x, y, z, hue) {
-                this.x = x; this.y = y; this.z = z; this.hue = hue;
-                this.alpha = 1;
-                this.vx = (Math.random()-0.5)*10; this.vy = (Math.random()-0.5)*10;
+        // 简单的背景粒子（流星效果），确保画面不“死”
+        class Star {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * w; this.y = Math.random() * h;
+                this.v = 0.5 + Math.random() * 1.5; this.len = 10 + Math.random() * 20;
             }
             update() {
-                this.vx *= 0.96; this.vy *= 0.96; this.vy += 0.1;
-                this.x += this.vx; this.y += this.vy;
-                this.alpha -= 0.02;
+                this.x -= this.v; this.y += this.v * 0.5;
+                if (this.x < -20 || this.y > h + 20) this.reset();
             }
             draw() {
-                if (this.alpha <= 0) return;
-                const p = project(this.x, this.y, 0, 0, 0);
-                ctx.fillStyle = `hsla(${this.hue}, 80%, 70%, ${this.alpha})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath(); ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.len, this.y - this.len * 0.5);
+                ctx.stroke();
             }
         }
 
         function animate() {
-            ctx.fillStyle = "#000";
+            globalTime++;
+            ctx.fillStyle = '#05050a';
             ctx.fillRect(0, 0, w, h);
-            
-            // 烟花效果也改为在左上角附近触发
-            if (!isStarMode && Math.random() < 0.05) {
-                const hue = Math.random()*60;
-                for(let i=0; i<30; i++) particles.push(new Particle((Math.random()-0.5)*100, (Math.random()-0.5)*100, 0, hue));
-            }
-            particles = particles.filter(p => { p.update(); p.draw(); return p.alpha > 0; });
 
-            if (isStarMode && photos.length > 0) {
-                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.1;
-                let targetIdx = handX * (photos.length - 1);
-                currentFocusIndex += (targetIdx - currentFocusIndex) * 0.1;
+            // 1. 绘制背景动态流星
+            particles.forEach(p => { p.update(); p.draw(); });
 
+            // 2. 绘制照片墙（左上角对齐）
+            if (photos.length > 0) {
+                // 如果没有手，照片会随时间微弱漂浮
+                let activeIdx = isHandVisible ? handX * photos.length : -1;
+                
                 photos.forEach((pData, i) => {
-                    let diff = Math.abs(i - currentFocusIndex);
-                    let focus = Math.max(0, 1 - diff * 0.8);
-                    let active = Math.abs(i - Math.round(currentFocusIndex)) < 0.5;
+                    let diff = Math.abs(i - activeIdx);
+                    let focus = isHandVisible ? Math.max(0, 1 - diff * 0.8) : 0;
                     
-                    ctx.globalAlpha = (0.2 + focus * 0.8) * (1 - zoomLerp) + (active ? zoomLerp : 0);
+                    // 基础位置：左上角堆叠
+                    let baseX = 40 + i * 15;
+                    let baseY = 150 + i * 10;
                     
-                    // 布局：向右下延伸的扇形
-                    let zOff = active ? zoomLerp * 300 : 0;
-                    let p = project(pData.x * (1-focus*0.5), pData.y * (1-focus*0.5), zOff, 0, 0);
+                    // 动态偏移：如果没有手，就随时间摆动；有手就跟手
+                    let offsetX = Math.sin(globalTime * 0.02 + i) * 10;
+                    let offsetY = Math.cos(globalTime * 0.02 + i) * 10;
                     
-                    // 照片尺寸进一步缩小，确保左上角放得下
-                    let scale = p.s * (0.3 + focus * 0.4 + (active ? zoomLerp * 0.4 : 0)) * (w < 600 ? 0.3 : 0.5);
-                    let sw = pData.img.width * scale;
-                    let sh = pData.img.height * scale;
+                    if (isHandVisible) {
+                        offsetX += focus * 50; 
+                        offsetY += focus * 20;
+                    }
+
+                    ctx.save();
+                    ctx.translate(baseX + offsetX, baseY + offsetY);
                     
-                    ctx.drawImage(pData.img, p.x, p.y, sw, sh);
+                    // 缩放逻辑
+                    let scale = (w < 600 ? 0.25 : 0.4) + (focus * 0.3);
+                    if (isPinching && focus > 0.8) scale *= 1.8; // 捏合放大
+
+                    ctx.globalAlpha = isHandVisible ? (0.3 + focus * 0.7) : 0.4;
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 10;
+                    
+                    let imgW = pData.img.width * scale;
+                    let imgH = pData.img.height * scale;
+                    
+                    // 绘制照片
+                    ctx.drawImage(pData.img, 0, 0, imgW, imgH);
+                    
+                    // 给选中的照片加个边框
+                    if (focus > 0.5) {
+                        ctx.strokeStyle = `rgba(255,215,0,${focus})`;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(0, 0, imgW, imgH);
+                    }
+                    ctx.restore();
                 });
             }
-            ctx.globalAlpha = 1;
+
             requestAnimationFrame(animate);
         }
 
-        async function setup() {
+        async function initAI() {
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
+                    isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
-                    handX = 1 - lm[9].x; handY = lm[9].y;
-                    isStarMode = Math.hypot(lm[12].x-lm[0].x, lm[12].y-lm[0].y) > 0.3;
-                    isPinching = isStarMode && Math.hypot(lm[8].x-lm[4].x, lm[8].y-lm[4].y) < 0.06;
+                    handX = 1 - lm[9].x; 
+                    handY = lm[9].y;
+                    
+                    // 判定张开与捏合
+                    const openLevel = Math.hypot(lm[12].x-lm[0].x, lm[12].y-lm[0].y);
+                    const pinchDist = Math.hypot(lm[8].x-lm[4].x, lm[8].y-lm[4].y);
+                    isPinching = pinchDist < 0.05;
+                    
+                    statusEl.innerText = isPinching ? "🔍 正在放大查看" : "👋 已识别：左右移动切换";
+                    statusEl.style.background = "rgba(0,255,0,0.2)";
+                } else {
+                    isHandVisible = false;
+                    statusEl.innerText = "⏳ 寻找手掌中...";
+                    statusEl.style.background = "rgba(255,255,255,0.1)";
                 }
             });
-            const video = document.getElementById('v');
-            const cam = new Camera(video, {
-                onFrame: async () => { await hands.send({image: video}); },
+
+            const cam = new Camera(document.getElementById('v'), {
+                onFrame: async () => { await hands.send({image: document.getElementById('v')}); },
                 width: 480, height: 640
             });
-            window.addEventListener('touchstart', () => { cam.start(); document.getElementById('status').innerText="HAND SENSOR ACTIVE"; }, {once: true});
+
+            window.addEventListener('touchstart', () => {
+                statusEl.innerText = "📷 相机启动中...";
+                cam.start();
+            }, {once: true});
         }
 
+        // 启动
         resize();
         window.addEventListener('resize', resize);
+        for(let i=0; i<20; i++) particles.push(new Star());
         
+        // 加载图片
+        let loaded = 0;
         for(let i=1; i<=13; i++) {
-            const img = new Image(); img.crossOrigin = "anonymous";
-            img.src = `${folderName}/${i}.jpg`;
-            img.onload = () => {
-                // 照片在 3D 空间向右下排列
-                photos.push({img, x: i * 40, y: i * 30});
-                if (photos.length === 13) { setup(); animate(); }
-            };
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = `mj/${i}.jpg`;
+            img.onload = () => { if(++loaded === 13) { initAI(); animate(); } };
         }
     </script>
 </body>
