@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 影像馆 - 终极稳定版</title>
+    <title>2026 影像馆 - 完美平衡版</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
@@ -39,7 +39,7 @@
         let isStarMode = false, isPinching = false, galaxyTime = 0;
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
 
-        // --- 工具函数：计算两点间距离 ---
+        // --- 工具函数 ---
         const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
         // --- 特效系统 ---
@@ -151,9 +151,12 @@
 
                     if (ctx.globalAlpha <= 0.01) return;
 
-                    let zOff = 200 + (isTarget ? (zoomLerp * 550) : (zoomLerp * 1500));
+                    // 【微调点 1】减小了拉近距离 (550 -> 500)
+                    let zOff = 200 + (isTarget ? (zoomLerp * 500) : (zoomLerp * 1500));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
-                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 4.0 : 0);
+                    
+                    // 【微调点 2】减小了放大倍数 (4.0 -> 3.0)
+                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 3.0 : 0);
                     let iw = pData.img.width * p.s * scale * 0.4;
                     let ih = pData.img.height * p.s * scale * 0.4;
 
@@ -177,11 +180,10 @@
                     const h = res.multiHandLandmarks[0];
                     handX = h[9].x; handY = h[9].y;
 
-                    // A. 计算基准大小：手腕(0)到中指根部(9)的距离
+                    // A. 计算基准大小
                     const palmSize = dist(h[0], h[9]);
                     
-                    // B. 计算指尖相对于手腕的距离比
-                    // 如果比值小，说明指尖在手掌内（握拳）；比值大说明指尖伸出去了（张手）
+                    // B. 计算指尖比例
                     const middleRatio = dist(h[12], h[0]) / palmSize;
                     const ringRatio = dist(h[16], h[0]) / palmSize;
                     const pinkyRatio = dist(h[20], h[0]) / palmSize;
@@ -189,9 +191,9 @@
                     // 只要中指、无名指或小指伸出来了，就是张手模式
                     const isHandOpen = middleRatio > 1.6 || ringRatio > 1.6 || pinkyRatio > 1.6;
                     
-                    // C. 捏合判定 (大拇指尖4 到 食指尖8)
+                    // C. 捏合判定
                     const pinchGap = dist(h[8], h[4]) / palmSize;
-                    const isNowPinching = isHandOpen && pinchGap < 0.45; // 仅在张手时允许捏合
+                    const isNowPinching = isHandOpen && pinchGap < 0.45; 
 
                     if (isNowPinching) {
                         isPinching = true; isStarMode = true;
