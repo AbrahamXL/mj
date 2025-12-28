@@ -3,27 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 聚光灯星河画廊</title>
+    <title>2026 极致聚焦影像馆</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'PingFang SC', sans-serif; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.3); } /* 稍微增加饱和度，让主角更突出 */
+        canvas { display: block; filter: contrast(1.15) saturate(1.3); } 
         #ui { position: absolute; top: 6%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 5px; }
-        h1 { font-size: 1.6rem; font-weight: 200; margin: 0; text-shadow: 0 0 20px #fff; }
+        h1 { font-size: 1.6rem; font-weight: 200; margin: 0; text-shadow: 0 0 20px rgba(255,255,255,0.8); }
         #status {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             color: #fff; font-size: 0.85rem; letter-spacing: 2px;
-            background: rgba(255,255,255,0.1); padding: 12px 30px; border-radius: 50px;
-            backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.2); z-index: 100;
-            white-space: nowrap; transition: all 0.3s;
+            background: rgba(255,255,255,0.05); padding: 12px 30px; border-radius: 50px;
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); z-index: 100;
+            white-space: nowrap; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
-        .highlight { color: #ffd700; border-color: #ffd700 !important; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
-        .error-status { background: rgba(255, 0, 0, 0.4) !important; border-color: #ff4444 !important; }
+        .highlight { color: #fff; background: rgba(255,215,0,0.2) !important; border-color: #ffd700 !important; box-shadow: 0 0 30px rgba(255,215,0,0.3); }
         video { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui"><h1>GALLERY OF TIME 2026</h1></div>
-    <div id="status">正在部署聚光灯系统...</div>
+    <div id="ui"><h1>EXCLUSIVE FOCUS 2026</h1></div>
+    <div id="status">系统准备中...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -31,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        // 【路径配置】确保正确
+        // 路径配置
         const folderName = "mj"; 
         const imageUrls = Array.from({length: 13}, (_, i) => `${folderName}/${i + 1}.jpg`);
 
@@ -51,10 +50,9 @@
                 img.onload = () => {
                     loadedCount++;
                     statusBox.innerText = `影像装填中 (${loadedCount}/13)`;
-                    // 使用整齐的半圆轨道布局
                     const angleSpacing = Math.PI * 0.8 / (imageUrls.length - 1);
                     const angle = -Math.PI * 0.4 + i * angleSpacing;
-                    const radius = 500;
+                    const radius = 550;
                     photos.push({ 
                         img, 
                         baseX: radius * Math.cos(angle), 
@@ -62,9 +60,9 @@
                         baseZ: radius * Math.sin(angle) + 200,
                         x: 0, y: 0, z: 0 
                     });
-                    if (loadedCount === imageUrls.length) { allImagesReady = true; statusBox.innerText = "✅ 系统就绪，请张开手掌"; callback(); }
+                    if (loadedCount === imageUrls.length) { allImagesReady = true; statusBox.innerText = "✅ 影像已备齐，请张开手掌"; callback(); }
                 };
-                img.onerror = () => { statusBox.innerText = `❌ 加载失败: ${url}`; statusBox.classList.add('error-status'); }; img.src = url;
+                img.onerror = () => { statusBox.innerText = `❌ 加载失败: ${url}`; }; img.src = url;
             });
         }
 
@@ -75,6 +73,7 @@
             const scale = 600 / (600 + z2 + 100); return { x: x1 * scale + w / 2, y: y2 * scale + h / 2, scale, z: z2 };
         }
 
+        // 烟花粒子系统
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
@@ -93,8 +92,7 @@
             }
             draw() {
                 if (this.alpha <= 0) return; const p = project(this.x, this.y, this.z); if (p.z < -300) return;
-                // 捏合时，背景粒子也变暗
-                ctx.beginPath(); ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (isPinching ? 0.2 : 1)})`; ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.9)})`; ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2); ctx.fill();
             }
         }
 
@@ -107,11 +105,11 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            // 捏合时，背景变得更黑，制造沉浸感
-            ctx.fillStyle = isPinching ? 'rgba(2, 2, 5, 0.8)' : 'rgba(8, 8, 20, 0.3)';
+            // 捏合时背景完全漆黑
+            ctx.fillStyle = `rgba(0, 0, 5, ${0.3 + zoomLerp * 0.5})`;
             ctx.fillRect(0, 0, w, h);
 
-            let rotScale = isStarMode ? (isPinching ? 0.2 : 0.8) : 1.5; // 捏合时几乎锁死相机视角
+            let rotScale = isStarMode ? (1 - zoomLerp * 0.95) : 1.5; 
             rotY += ((handX - 0.5) * 3.0 * rotScale - rotY) * 0.05;
             rotX += ((handY - 0.5) * 2.0 * rotScale - rotX) * 0.05;
             if (isStarMode) galaxyTime += 1;
@@ -125,55 +123,44 @@
                 ctx.globalCompositeOperation = 'source-over';
                 let targetIdx = (1.0 - handX) * (photos.length - 1);
                 currentFocusIndex += (targetIdx - currentFocusIndex) * 0.1;
-                // 捏合插值更顺滑
-                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.2;
+                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.15;
 
                 photos.forEach((pData, i) => {
                     let dist = Math.abs(i - currentFocusIndex);
-                    let focusFactor = Math.max(0, 1 - dist * 0.4); 
-                    
-                    // 判断当前照片是否是主角
+                    let focusFactor = Math.max(0, 1 - dist * 0.35); 
                     let isTarget = i === Math.round(currentFocusIndex);
 
-                    // --- 核心算法：聚光灯效应 ---
-                    // 1. 定义正常浏览状态下的参数
-                    let normalScale = 0.15 + focusFactor * 0.85;
-                    let normalAlpha = 0.2 + focusFactor * 0.8;
-                    let normalZ = 250;
+                    // --- 极致聚焦算法 ---
+                    // 1. 正常状态
+                    let normalScale = 0.15 + focusFactor * 0.8;
+                    let normalAlpha = 0.1 + focusFactor * 0.9;
+                    let normalZ = 200;
 
-                    // 2. 定义捏合状态下的目标参数（极端两极分化）
-                    // 主角：极大(3.5倍)，全不透明(1.0)，极近(450)
-                    // 配角：极小(0.05倍)，几乎透明(0.05)，推远(800)
-                    let pinchedScaleTarget = isTarget ? 3.5 : 0.05;
-                    let pinchedAlphaTarget = isTarget ? 1.0 : 0.05;
-                    let pinchedZTarget = isTarget ? 450 : 800; 
+                    // 2. 捏合状态 (Target 独占)
+                    // 非主角(isTarget为false)的 Alpha 设为 0，Scale 设为 0
+                    let pScale = isTarget ? 3.8 : 0.0; 
+                    let pAlpha = isTarget ? 1.0 : 0.0;
+                    let pZ = isTarget ? 480 : 1200;
 
-                    // 3. 使用 zoomLerp 在两者之间进行平滑插值
-                    // 公式：当前值 = 正常值 + (目标值 - 正常值) * 捏合进度
-                    let finalScaleBase = normalScale + (pinchedScaleTarget - normalScale) * zoomLerp;
-                    ctx.globalAlpha = normalAlpha + (pinchedAlphaTarget - normalAlpha) * zoomLerp;
-                    let targetZOffset = normalZ + (pinchedZTarget - normalZ) * zoomLerp;
+                    // 3. 插值混合
+                    let finalScale = normalScale + (pScale - normalScale) * zoomLerp;
+                    let finalAlpha = normalAlpha + (pAlpha - normalAlpha) * zoomLerp;
+                    let finalZOffset = normalZ + (pZ - normalZ) * zoomLerp;
 
                     pData.x = pData.baseX * (1 - focusFactor);
                     pData.y = pData.baseY * (1 - focusFactor);
-                    pData.z = pData.baseZ * (1 - focusFactor) + targetZOffset * focusFactor;
+                    pData.z = pData.baseZ * (1 - focusFactor) + finalZOffset * focusFactor;
 
                     const p = project(pData.x, pData.y, pData.z);
-                    if (p.z < -250) return;
+                    if (p.z < -250 || finalAlpha <= 0.01) return;
 
-                    let imgW = pData.img.width * p.scale * finalScaleBase * 0.5;
-                    let imgH = pData.img.height * p.scale * finalScaleBase * 0.5;
+                    ctx.globalAlpha = finalAlpha;
+                    let imgW = pData.img.width * p.scale * finalScale * 0.5;
+                    let imgH = pData.img.height * p.scale * finalScale * 0.5;
 
-                    // 只有主角在捏合时有强烈光晕，其他时候没有
                     if (isTarget && zoomLerp > 0.1) {
-                        ctx.shadowBlur = 30 + zoomLerp * 50;
-                        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-                    } else if (focusFactor > 0.9 && zoomLerp <= 0.1) {
-                        // 浏览时的微弱光晕
-                        ctx.shadowBlur = 20;
-                        ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
-                    } else {
-                        ctx.shadowBlur = 0;
+                        ctx.shadowBlur = 40 * zoomLerp;
+                        ctx.shadowColor = 'rgba(255,255,255,0.9)';
                     }
                     
                     ctx.drawImage(pData.img, p.x - imgW/2, p.y - imgH/2, imgW, imgH);
@@ -187,21 +174,21 @@
         async function setupAI() {
             const status = document.getElementById('status');
             const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.75 });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.8 });
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
                     isStarMode = Math.hypot(h[8].x - h[0].x, h[8].y - h[0].y) > 0.35;
                     const pinchDist = Math.hypot(h[8].x - h[4].x, h[8].y - h[4].y);
-                    isPinching = isStarMode && pinchDist < 0.055;
+                    isPinching = isStarMode && pinchDist < 0.05; // 缩小判定范围，捏得更紧才触发
                     handX = h[9].x; handY = h[9].y;
-                    if (isPinching) { status.innerText = "🔍 正在抓取放大..."; status.classList.add("highlight"); }
-                    else if (isStarMode) { status.innerText = "🌌 左右滑动浏览 | 捏合指尖放大"; status.classList.remove("highlight"); }
+                    if (isPinching) { status.innerText = "✨ 独占聚焦模式"; status.classList.add("highlight"); }
+                    else if (isStarMode) { status.innerText = "🌌 滑动选择影像 | 捏合放大"; status.classList.remove("highlight"); }
                     else { status.innerText = "🎆 握拳烟火 | 张手星河"; status.classList.remove("highlight"); }
                 }
             });
             const cam = new Camera(document.getElementById('v'), { onFrame: async () => { await hands.send({ image: document.getElementById('v') }); }, width: 640, height: 480 });
-            cam.start().catch(err => { status.innerText = "❌ 摄像头启动失败"; status.classList.add('error-status'); });
+            cam.start();
         }
 
         resize(); window.onresize = resize; preloadImages(() => {}); setupAI(); animate();
