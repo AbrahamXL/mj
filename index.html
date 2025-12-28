@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 Memories Gallery</title>
+    <title>2026 Galaxy Celebration</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; touch-action: none; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
         
         #ui { 
@@ -15,25 +15,26 @@
             pointer-events: none; z-index: 5; transition: opacity 0.5s ease;
         }
 
+        /* 响应式文字：手机竖屏略大，横屏/电脑适中 */
         .year-display {
-            font-size: 16vw; font-weight: 700; line-height: 0.8; margin: 0; letter-spacing: 0.5rem;
+            font-size: 20vw; font-weight: 700; line-height: 0.8; margin: 0; letter-spacing: 0.2rem;
             color: rgba(255, 255, 255, 0.15); -webkit-text-stroke: 1px rgba(255, 215, 0, 0.2);
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
             animation: elegantPulse 6s ease-in-out infinite;
         }
-
-        @keyframes elegantPulse {
-            0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; }
-        }
+        @media (min-width: 1024px) { .year-display { font-size: 15vw; } }
 
         .sub-title {
-            font-family: 'Playfair Display', serif; font-style: italic; font-size: 2.5vw;
-            color: rgba(255, 255, 255, 0.4); letter-spacing: 0.6rem; margin-top: 1.5rem;
+            font-family: 'Playfair Display', serif; font-style: italic; font-size: 4vw;
+            color: rgba(255, 255, 255, 0.4); letter-spacing: 0.3rem; margin-top: 1rem;
         }
+        @media (min-width: 1024px) { .sub-title { font-size: 2vw; letter-spacing: 0.6rem; } }
 
         #status {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.3); font-size: 0.6rem; letter-spacing: 4px; z-index: 100;
+            position: absolute; bottom: env(safe-area-inset-bottom, 30px); 
+            left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.3); font-size: 0.6rem; letter-spacing: 3px; z-index: 100;
+            white-space: nowrap;
         }
         video { display: none; }
     </style>
@@ -43,7 +44,7 @@
         <h1 class="year-display">2026</h1>
         <div class="sub-title">Happy New Year</div>
     </div>
-    <div id="status">Wait for Camera...</div>
+    <div id="status">INITIALIZING CAMERA...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -59,20 +60,21 @@
         let w, h, dpr, photos = [], particles = [], rockets = [];
         let isStarMode = false, isPinching = false, galaxyTime = 0;
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
+
         const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue;
                 const rFactor = Math.random();
-                this.orbitRadius = 400 + (rFactor * rFactor) * 1100; 
+                this.orbitRadius = 350 + (rFactor * rFactor) * 1000; 
                 this.orbitAngle = Math.random() * Math.PI * 2;
                 this.orbitSpeed = (Math.random() - 0.5) * 0.0015;
-                this.baseSize = 0.6 + Math.random() * 2.0;
+                this.baseSize = 0.8 + Math.random() * 2.0;
                 this.baseAlpha = 0.2 + Math.random() * 0.5;
                 this.alpha = 1;
                 this.baseY = (Math.random() - 0.5) * 400 * (1 - rFactor * 0.6);
-                const v = 6 + Math.random() * 11; 
+                const v = 5 + Math.random() * 10; 
                 const ang = Math.random() * Math.PI * 2;
                 const p = Math.random() * Math.PI;
                 this.vx = Math.sin(p) * Math.cos(ang) * v; 
@@ -82,12 +84,9 @@
             update() {
                 if (isStarMode) {
                     let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
-                    const targetX = this.orbitRadius * Math.cos(ang);
-                    const targetZ = this.orbitRadius * Math.sin(ang);
-                    const targetY = this.baseY + Math.sin(ang * 2) * 40;
-                    this.x += (targetX - this.x) * 0.05;
-                    this.z += (targetZ - this.z) * 0.05;
-                    this.y += (targetY - this.y) * 0.05; 
+                    this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.05;
+                    this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.05;
+                    this.y += (this.baseY + Math.sin(ang * 2) * 40 - this.y) * 0.05; 
                     this.alpha = this.baseAlpha * (0.6 + Math.sin(galaxyTime * 0.03 + this.orbitRadius) * 0.4);
                 } else {
                     this.vx *= 0.975; this.vy *= 0.975; this.vz *= 0.975; 
@@ -106,10 +105,9 @@
 
         class Rocket {
             constructor() {
-                this.x = (Math.random()-0.5)*900; this.y = 800; this.z = (Math.random()-0.5)*800;
-                this.targetY = -150-Math.random()*450; 
-                this.done = false;
-                const warmPalettes = [40, 25, 10]; 
+                this.x = (Math.random()-0.5)*800; this.y = 800; this.z = (Math.random()-0.5)*800;
+                this.targetY = -150-Math.random()*400; this.done = false;
+                const warmPalettes = [35, 20, 10]; 
                 this.hue = warmPalettes[Math.floor(Math.random() * warmPalettes.length)] + (Math.random()-0.5)*15;
             }
             update() { this.y -= 22; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
@@ -119,8 +117,8 @@
                 ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
             }
             explode() { 
-                for (let i = 0; i < 160; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue));
-                if (particles.length > 1200) particles.splice(0, 160);
+                for (let i = 0; i < 150; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue));
+                if (particles.length > 1000) particles.splice(0, 150);
             }
         }
 
@@ -131,9 +129,8 @@
                 img.onload = () => {
                     const angleSpacing = Math.PI * 0.8 / 12;
                     const angle = -Math.PI * 0.4 + i * angleSpacing;
-                    photos.push({ img, baseX: 600 * Math.cos(angle), baseZ: 600 * Math.sin(angle) + 200, id: i });
-                    loadedCount++;
-                    if (loadedCount === imageUrls.length) callback();
+                    photos.push({ img, baseX: 580 * Math.cos(angle), baseZ: 580 * Math.sin(angle) + 200, id: i });
+                    loadedCount++; if (loadedCount === imageUrls.length) callback();
                 };
                 img.onerror = () => { loadedCount++; if (loadedCount === imageUrls.length) callback(); };
                 img.src = url;
@@ -142,7 +139,7 @@
 
         function resize() {
             w = window.innerWidth; h = window.innerHeight;
-            dpr = window.devicePixelRatio || 1;
+            dpr = Math.min(window.devicePixelRatio || 1, 2); // 限制 DPR 提升性能
             canvas.width = w * dpr; canvas.height = h * dpr;
             ctx.scale(dpr, dpr);
         }
@@ -152,7 +149,7 @@
             let z1 = x * Math.sin(ry) + z * Math.cos(ry);
             let y2 = y * Math.cos(rx) - z1 * Math.sin(rx);
             let z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
-            const s = 600 / (600 + z2);
+            const s = (w < 600 ? 400 : 600) / (600 + z2); // 手机端调整透视焦距
             return { x: x1 * s + w / 2, y: y2 * s + h / 2, s, z: z2 };
         }
 
@@ -168,11 +165,10 @@
             if (isStarMode) galaxyTime++;
 
             ctx.globalCompositeOperation = 'lighter';
-            if (!isStarMode && Math.random() < 0.08 && rockets.length < 5) rockets.push(new Rocket());
+            if (!isStarMode && Math.random() < 0.07 && rockets.length < 4) rockets.push(new Rocket());
             rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
 
-            // --- 照片显示逻辑：只要有照片且在 StarMode 模式下就显示 ---
             if (photos.length > 0 && isStarMode) {
                 ctx.globalCompositeOperation = 'source-over';
                 let targetIdx = Math.max(0, Math.min(photos.length-1, handX * photos.length));
@@ -183,22 +179,15 @@
                     let distIdx = Math.abs(pData.id - currentFocusIndex);
                     let focusFactor = Math.max(0, 1 - distIdx * 0.4);
                     let isTarget = Math.round(currentFocusIndex) === pData.id;
-                    
                     ctx.globalAlpha = (0.2 + focusFactor * 0.8) * (1 - zoomLerp) + (isTarget ? zoomLerp : 0);
                     if (ctx.globalAlpha <= 0.01) return;
 
                     let zOff = 200 + (isTarget ? (zoomLerp * 350) : (zoomLerp * 1500));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
-                    
                     let scale = (0.25 + focusFactor * 0.75) + (isTarget ? zoomLerp * 1.0 : 0);
-                    let iw = pData.img.width * p.s * scale * 0.3;
-                    let ih = pData.img.height * p.s * scale * 0.3;
-
-                    if (isTarget && zoomLerp > 0.1) { 
-                        ctx.shadowBlur = 30 * zoomLerp; ctx.shadowColor = "white"; 
-                    }
+                    let iw = pData.img.width * p.s * scale * (w < 600 ? 0.35 : 0.28); 
+                    let ih = pData.img.height * p.s * scale * (w < 600 ? 0.35 : 0.28);
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
-                    ctx.shadowBlur = 0;
                 });
             }
             ctx.globalAlpha = 1;
@@ -208,24 +197,22 @@
         async function setupAI() {
             const status = document.getElementById('status');
             const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
                     handX = 1.0 - h[9].x; handY = h[9].y;
                     const palmSize = dist(h[0], h[9]);
-                    isStarMode = dist(h[12], h[0]) / palmSize > 1.6;
-                    isPinching = isStarMode && dist(h[8], h[4]) / palmSize < 0.45;
+                    isStarMode = dist(h[12], h[0]) / palmSize > 1.5;
+                    isPinching = isStarMode && dist(h[8], h[4]) / palmSize < 0.5;
                     status.innerText = isPinching ? "VIEWING" : (isStarMode ? "GALLERY" : "2026 FIREWORKS");
-                } else {
-                    status.innerText = "SHOW HAND TO START";
-                }
+                } else { status.innerText = "SHOW HAND TO START"; }
             });
             const cam = new Camera(document.getElementById('v'), {
                 onFrame: async () => { await hands.send({ image: document.getElementById('v') }); },
                 width: 640, height: 480
             });
-            cam.start();
+            cam.start().then(() => status.innerText = "CAMERA READY");
         }
         resize(); window.onresize = resize; preloadImages(() => { setupAI(); animate(); });
     </script>
