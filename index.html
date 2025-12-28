@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 秩序星河画廊</title>
+    <title>2026 聚光灯星河画廊</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'PingFang SC', sans-serif; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
+        canvas { display: block; filter: contrast(1.1) saturate(1.3); } /* 稍微增加饱和度，让主角更突出 */
         #ui { position: absolute; top: 6%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 5px; }
         h1 { font-size: 1.6rem; font-weight: 200; margin: 0; text-shadow: 0 0 20px #fff; }
         #status {
@@ -16,13 +16,14 @@
             backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.2); z-index: 100;
             white-space: nowrap; transition: all 0.3s;
         }
-        .highlight { color: #ffd700; border-color: #ffd700 !important; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        .highlight { color: #ffd700; border-color: #ffd700 !important; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
+        .error-status { background: rgba(255, 0, 0, 0.4) !important; border-color: #ff4444 !important; }
         video { display: none; }
     </style>
 </head>
 <body>
     <div id="ui"><h1>GALLERY OF TIME 2026</h1></div>
-    <div id="status">正在构建秩序空间...</div>
+    <div id="status">正在部署聚光灯系统...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -30,7 +31,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        // 【路径配置】请确保这里是正确的 mj 文件夹路径
+        // 【路径配置】确保正确
         const folderName = "mj"; 
         const imageUrls = Array.from({length: 13}, (_, i) => `${folderName}/${i + 1}.jpg`);
 
@@ -50,23 +51,20 @@
                 img.onload = () => {
                     loadedCount++;
                     statusBox.innerText = `影像装填中 (${loadedCount}/13)`;
-                    
-                    // --- 核心改动：更整齐的轨道布局 ---
-                    // 将它们排列在一个更平缓的半圆弧轨道上
-                    const angleSpacing = Math.PI * 0.8 / (imageUrls.length - 1); // 总跨度0.8个半圆
-                    const angle = -Math.PI * 0.4 + i * angleSpacing; // 从左到右排列
-                    const radius = 500; // 统一半径，形成清晰的圆环
-
+                    // 使用整齐的半圆轨道布局
+                    const angleSpacing = Math.PI * 0.8 / (imageUrls.length - 1);
+                    const angle = -Math.PI * 0.4 + i * angleSpacing;
+                    const radius = 500;
                     photos.push({ 
                         img, 
                         baseX: radius * Math.cos(angle), 
-                        baseY: 0, // 【关键】抹平垂直高度差，让它们在同一水平面上
-                        baseZ: radius * Math.sin(angle) + 200, // 稍微推远一点
+                        baseY: 0, 
+                        baseZ: radius * Math.sin(angle) + 200,
                         x: 0, y: 0, z: 0 
                     });
-                    if (loadedCount === imageUrls.length) { allImagesReady = true; statusBox.innerText = "✅ 秩序空间已建立，请张手"; callback(); }
+                    if (loadedCount === imageUrls.length) { allImagesReady = true; statusBox.innerText = "✅ 系统就绪，请张开手掌"; callback(); }
                 };
-                img.onerror = () => { statusBox.innerText = `❌ 加载失败: ${url}`; }; img.src = url;
+                img.onerror = () => { statusBox.innerText = `❌ 加载失败: ${url}`; statusBox.classList.add('error-status'); }; img.src = url;
             });
         }
 
@@ -95,7 +93,8 @@
             }
             draw() {
                 if (this.alpha <= 0) return; const p = project(this.x, this.y, this.z); if (p.z < -300) return;
-                ctx.beginPath(); ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (isPinching ? 0.3 : 1)})`; ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2); ctx.fill();
+                // 捏合时，背景粒子也变暗
+                ctx.beginPath(); ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (isPinching ? 0.2 : 1)})`; ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2); ctx.fill();
             }
         }
 
@@ -108,11 +107,11 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = isPinching ? 'rgba(5, 5, 12, 0.7)' : 'rgba(8, 8, 20, 0.3)';
+            // 捏合时，背景变得更黑，制造沉浸感
+            ctx.fillStyle = isPinching ? 'rgba(2, 2, 5, 0.8)' : 'rgba(8, 8, 20, 0.3)';
             ctx.fillRect(0, 0, w, h);
 
-            // 减小星系模式下的相机晃动幅度，增加稳定感
-            let rotScale = isStarMode ? 0.8 : 1.5;
+            let rotScale = isStarMode ? (isPinching ? 0.2 : 0.8) : 1.5; // 捏合时几乎锁死相机视角
             rotY += ((handX - 0.5) * 3.0 * rotScale - rotY) * 0.05;
             rotX += ((handY - 0.5) * 2.0 * rotScale - rotX) * 0.05;
             if (isStarMode) galaxyTime += 1;
@@ -126,35 +125,57 @@
                 ctx.globalCompositeOperation = 'source-over';
                 let targetIdx = (1.0 - handX) * (photos.length - 1);
                 currentFocusIndex += (targetIdx - currentFocusIndex) * 0.1;
-                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.15;
+                // 捏合插值更顺滑
+                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.2;
 
                 photos.forEach((pData, i) => {
                     let dist = Math.abs(i - currentFocusIndex);
-                    // 【核心改动：极端的视觉层级】
-                    // focusFactor 下降得更快，只有非常靠近中心的照片才有高权重
                     let focusFactor = Math.max(0, 1 - dist * 0.4); 
-                    let currentZoom = (i === Math.round(currentFocusIndex)) ? zoomLerp : 0;
+                    
+                    // 判断当前照片是否是主角
+                    let isTarget = i === Math.round(currentFocusIndex);
+
+                    // --- 核心算法：聚光灯效应 ---
+                    // 1. 定义正常浏览状态下的参数
+                    let normalScale = 0.15 + focusFactor * 0.85;
+                    let normalAlpha = 0.2 + focusFactor * 0.8;
+                    let normalZ = 250;
+
+                    // 2. 定义捏合状态下的目标参数（极端两极分化）
+                    // 主角：极大(3.5倍)，全不透明(1.0)，极近(450)
+                    // 配角：极小(0.05倍)，几乎透明(0.05)，推远(800)
+                    let pinchedScaleTarget = isTarget ? 3.5 : 0.05;
+                    let pinchedAlphaTarget = isTarget ? 1.0 : 0.05;
+                    let pinchedZTarget = isTarget ? 450 : 800; 
+
+                    // 3. 使用 zoomLerp 在两者之间进行平滑插值
+                    // 公式：当前值 = 正常值 + (目标值 - 正常值) * 捏合进度
+                    let finalScaleBase = normalScale + (pinchedScaleTarget - normalScale) * zoomLerp;
+                    ctx.globalAlpha = normalAlpha + (pinchedAlphaTarget - normalAlpha) * zoomLerp;
+                    let targetZOffset = normalZ + (pinchedZTarget - normalZ) * zoomLerp;
 
                     pData.x = pData.baseX * (1 - focusFactor);
                     pData.y = pData.baseY * (1 - focusFactor);
-                    pData.z = pData.baseZ * (1 - focusFactor) + (250 + currentZoom * 200) * focusFactor;
+                    pData.z = pData.baseZ * (1 - focusFactor) + targetZOffset * focusFactor;
 
                     const p = project(pData.x, pData.y, pData.z);
                     if (p.z < -250) return;
 
-                    // 【核心改动：尺寸和透明度的巨大差异】
-                    // 背景照片：基础尺寸只有 0.15 (极小)，透明度只有 0.2 (极淡)
-                    // 焦点照片：尺寸会加很大，透明度变为 1
-                    let baseScale = 0.15 + focusFactor * 0.85 + currentZoom * 1.5;
-                    ctx.globalAlpha = 0.2 + focusFactor * 0.8;
+                    let imgW = pData.img.width * p.scale * finalScaleBase * 0.5;
+                    let imgH = pData.img.height * p.scale * finalScaleBase * 0.5;
 
-                    let imgW = pData.img.width * p.scale * baseScale * 0.5;
-                    let imgH = pData.img.height * p.scale * baseScale * 0.5;
-
-                    if (focusFactor > 0.9) {
-                        ctx.shadowBlur = 30 + currentZoom * 40;
-                        ctx.shadowColor = isPinching ? '#fff' : 'rgba(255,215,0,0.6)';
+                    // 只有主角在捏合时有强烈光晕，其他时候没有
+                    if (isTarget && zoomLerp > 0.1) {
+                        ctx.shadowBlur = 30 + zoomLerp * 50;
+                        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                    } else if (focusFactor > 0.9 && zoomLerp <= 0.1) {
+                        // 浏览时的微弱光晕
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
+                    } else {
+                        ctx.shadowBlur = 0;
                     }
+                    
                     ctx.drawImage(pData.img, p.x - imgW/2, p.y - imgH/2, imgW, imgH);
                     ctx.shadowBlur = 0;
                 });
