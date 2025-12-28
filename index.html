@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 影像馆 - 精致聚焦版</title>
+    <title>2026 影像馆 - 全域选中版</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; }
         canvas { display: block; filter: contrast(1.1) saturate(1.2); }
@@ -123,6 +123,7 @@
             ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.6})`;
             ctx.fillRect(0, 0, w, h);
 
+            // 锁定旋转感应
             const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
             const rotX = (handY - 0.5) * (1 - zoomLerp * 0.95);
             if (isStarMode) galaxyTime++;
@@ -134,13 +135,24 @@
 
             if (photos.length === 13 && isStarMode) {
                 ctx.globalCompositeOperation = 'source-over';
-                let targetIdx = (1.0 - handX) * 12;
-                currentFocusIndex += (targetIdx - currentFocusIndex) * 0.1;
+
+                // --- 核心修复：感应映射算法 ---
+                // 我们假设手的舒适移动范围在 0.25 到 0.75 之间 (中间的50%宽度)
+                // 用这个范围来映射 0 到 12 的索引
+                let sensitivityRange = 0.5; 
+                let offset = (1.0 - sensitivityRange) / 2; // 0.25
+                let normalizedX = (handX - offset) / sensitivityRange; 
+                
+                // 反转并限制范围 (因为手往左移动 handX 变小，我们希望索引变小)
+                let targetIdx = normalizedX * 12;
+                targetIdx = Math.max(0, Math.min(12, targetIdx));
+
+                currentFocusIndex += (targetIdx - currentFocusIndex) * 0.12;
                 zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.18;
 
                 photos.forEach((pData, i) => {
-                    let dist = Math.abs(i - currentFocusIndex);
-                    let focusFactor = Math.max(0, 1 - dist * 0.4);
+                    let distIdx = Math.abs(i - currentFocusIndex);
+                    let focusFactor = Math.max(0, 1 - distIdx * 0.4);
                     let isTarget = i === Math.round(currentFocusIndex);
                     
                     let targetAlpha = isTarget ? 1.0 : 0.0;
@@ -151,9 +163,7 @@
                     let zOff = 200 + (isTarget ? (zoomLerp * 300) : (zoomLerp * 1500));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
                     
-                    // 【核心修改】减小放大倍率 (1.5 -> 1.0)
                     let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 1.0 : 0);
-                    // 【微调】稍微减小整体基础尺寸 (0.35 -> 0.3)
                     let iw = pData.img.width * p.s * scale * 0.3;
                     let ih = pData.img.height * p.s * scale * 0.3;
 
@@ -174,12 +184,13 @@
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
-                    handX = h[9].x; handY = h[9].y;
+                    // 镜像处理坐标：1.0 - x 让手往左移动时，索引也往左走
+                    handX = 1.0 - h[9].x; 
+                    handY = h[9].y;
+                    
                     const palmSize = dist(h[0], h[9]);
                     const middleRatio = dist(h[12], h[0]) / palmSize;
-                    const ringRatio = dist(h[16], h[0]) / palmSize;
-                    const pinkyRatio = dist(h[20], h[0]) / palmSize;
-                    const isHandOpen = middleRatio > 1.6 || ringRatio > 1.6 || pinkyRatio > 1.6;
+                    const isHandOpen = middleRatio > 1.6;
                     const pinchGap = dist(h[8], h[4]) / palmSize;
                     const isNowPinching = isHandOpen && pinchGap < 0.45; 
 
