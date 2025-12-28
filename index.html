@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 影像馆 - 终极整合版</title>
+    <title>2026 影像馆 - 最终整合版</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.3); }
-        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 5px; opacity: 0.7; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
+        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 5px; }
         #status {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             color: #fff; font-size: 0.9rem; background: rgba(255,255,255,0.05);
             padding: 12px 30px; border-radius: 50px; backdrop-filter: blur(15px);
             border: 1px solid rgba(255,255,255,0.1); z-index: 100; transition: 0.4s;
+            white-space: nowrap;
         }
         .active-status { border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.4); color: #ffd700; }
         video { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui"><h1 style="font-weight:200;">STARS & MEMORIES 2026</h1></div>
-    <div id="status">正在同步星系频率...</div>
+    <div id="ui"><h1 style="font-weight:200;">STARS GALLERY 2026</h1></div>
+    <div id="status">系统初始化中...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -28,6 +29,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
+        // --- 1. 配置与初始化 ---
         const folderName = "mj"; 
         const imageUrls = Array.from({length: 13}, (_, i) => `${folderName}/${i + 1}.jpg`);
 
@@ -37,15 +39,19 @@
         let isStarMode = false, isPinching = false, galaxyTime = 0;
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
 
-        // --- 1. 背景粒子与烟花逻辑 ---
+        // --- 2. 粒子与烟火类 ---
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
                 this.orbitRadius = 300 + Math.random() * 800;
                 this.orbitAngle = Math.random() * Math.PI * 2;
                 this.orbitSpeed = (Math.random() - 0.5) * 0.003;
-                const v = 6 + Math.random() * 8; const ang = Math.random() * Math.PI * 2; const p = Math.random() * Math.PI;
-                this.vx = Math.sin(p) * Math.cos(ang) * v; this.vy = Math.sin(p) * Math.sin(ang) * v; this.vz = Math.cos(p) * v;
+                const v = 6 + Math.random() * 8;
+                const ang = Math.random() * Math.PI * 2;
+                const p = Math.random() * Math.PI;
+                this.vx = Math.sin(p) * Math.cos(ang) * v;
+                this.vy = Math.sin(p) * Math.sin(ang) * v;
+                this.vz = Math.cos(p) * v;
             }
             update() {
                 if (isStarMode) {
@@ -63,8 +69,8 @@
                 if (this.alpha <= 0) return;
                 const p = project(this.x, this.y, this.z, rx, ry);
                 if (p.z < -300) return;
-                // 捏合时背景粒子变淡
-                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.85)})`;
+                // 捏合时背景粒子变淡至几乎看不见
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.95)})`;
                 ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, p.s * 3), 0, Math.PI * 2); ctx.fill();
             }
         }
@@ -83,18 +89,21 @@
             explode() { for (let i = 0; i < 50; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
         }
 
-        // --- 2. 核心系统 ---
+        // --- 3. 核心计算与渲染 ---
         function preloadImages(callback) {
             let loadedCount = 0;
+            const statusBox = document.getElementById('status');
             imageUrls.forEach((url, i) => {
                 const img = new Image(); img.crossOrigin = "Anonymous";
                 img.onload = () => {
                     loadedCount++;
+                    statusBox.innerText = `影像装填中 (${loadedCount}/13)`;
                     const angleSpacing = Math.PI * 0.8 / 12;
                     const angle = -Math.PI * 0.4 + i * angleSpacing;
                     photos.push({ img, baseX: 550 * Math.cos(angle), baseZ: 550 * Math.sin(angle) + 200 });
                     if (loadedCount === 13) callback();
                 };
+                img.onerror = () => { statusBox.innerText = `❌ 图片加载失败: ${url}`; };
                 img.src = url;
             });
         }
@@ -106,6 +115,7 @@
             ctx.scale(dpr, dpr);
         }
 
+        // 透视投影公式
         function project(x, y, z, rx, ry) {
             let x1 = x * Math.cos(ry) - z * Math.sin(ry);
             let z1 = x * Math.sin(ry) + z * Math.cos(ry);
@@ -117,20 +127,21 @@
 
         function animate() {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.5})`;
+            ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.6})`; // 捏合时背景加深
             ctx.fillRect(0, 0, w, h);
 
+            // 捏合时锁定视角波动
             const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
             const rotX = (handY - 0.5) * (1 - zoomLerp * 0.95);
             if (isStarMode) galaxyTime++;
 
-            // 绘制烟花与粒子
+            // --- 绘制背景层 ---
             ctx.globalCompositeOperation = 'lighter';
             if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
             rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
 
-            // 绘制照片
+            // --- 绘制照片层 ---
             if (photos.length === 13 && isStarMode) {
                 ctx.globalCompositeOperation = 'source-over';
                 let targetIdx = (1.0 - handX) * 12;
@@ -142,16 +153,18 @@
                     let focusFactor = Math.max(0, 1 - dist * 0.4);
                     let isTarget = i === Math.round(currentFocusIndex);
 
+                    // 极致隔离逻辑
                     let normalAlpha = 0.2 + focusFactor * 0.8;
-                    let targetAlpha = isTarget ? 1.0 : 0.0; // 非目标图捏合时完全消失
+                    let targetAlpha = isTarget ? 1.0 : 0.0;
                     ctx.globalAlpha = normalAlpha + (targetAlpha - normalAlpha) * zoomLerp;
 
                     if (ctx.globalAlpha <= 0.01) return;
 
+                    // 捏合时照片向前飞
                     let zOff = 200 + (isTarget ? (zoomLerp * 500) : (zoomLerp * 1200));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
 
-                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 3.5 : 0);
+                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 3.8 : 0);
                     let iw = pData.img.width * p.s * scale * 0.4;
                     let ih = pData.img.height * p.s * scale * 0.4;
 
@@ -168,35 +181,50 @@
             requestAnimationFrame(animate);
         }
 
+        // --- 4. 手势控制逻辑 ---
         async function setupAI() {
             const status = document.getElementById('status');
             const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+            
+            hands.setOptions({ 
+                maxNumHands: 1, 
+                modelComplexity: 1, 
+                minDetectionConfidence: 0.6, 
+                minTrackingConfidence: 0.6 
+            });
             
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
                     handX = h[9].x; handY = h[9].y;
 
-                    // 1. 判断是否张开手掌 (星河/照片模式)
-                    isStarMode = Math.hypot(h[8].x - h[0].x, h[8].y - h[0].y) > 0.35;
+                    // 【修复逻辑】判定中指（12）到手腕（0）的距离，用于区分握拳和张手
+                    const middleToWrist = Math.hypot(h[12].x - h[0].x, h[12].y - h[0].y);
+                    const openHandThreshold = 0.32; 
                     
-                    // 2. 判断捏合 (放大模式)
+                    // 判定捏合（大拇指4和食指8）
                     const pinchDist = Math.hypot(h[8].x - h[4].x, h[8].y - h[4].y);
-                    isPinching = isStarMode && pinchDist < 0.1; 
+                    const isNowPinching = pinchDist < 0.12; 
 
-                    if (isPinching) {
-                        status.innerText = "✨ 极致聚焦：正在放大影像";
+                    if (isNowPinching) {
+                        isStarMode = true; // 捏合时强制锁定星河模式
+                        isPinching = true;
+                        status.innerText = "✨ 极致聚焦：正在深度观察影像";
                         status.classList.add('active-status');
-                    } else if (isStarMode) {
-                        status.innerText = "🌌 滑动切换影像 | 捏合指尖放大";
-                        status.classList.remove('active-status');
                     } else {
-                        status.innerText = "🎆 握拳：燃放星火烟火";
-                        status.classList.remove('active-status');
+                        isPinching = false;
+                        isStarMode = middleToWrist > openHandThreshold;
+                        
+                        if (isStarMode) {
+                            status.innerText = "🌌 滑动切换影像 | 捏合指尖放大";
+                            status.classList.remove('active-status');
+                        } else {
+                            status.innerText = "🎆 握拳：正在同步星火序列";
+                            status.classList.remove('active-status');
+                        }
                     }
                 } else {
-                    status.innerText = "👋 欢迎来到 2026 影像馆";
+                    status.innerText = "👋 欢迎回来，请展示手掌";
                 }
             });
 
@@ -207,7 +235,14 @@
             cam.start();
         }
 
-        resize(); window.onresize = resize; preloadImages(() => {}); setupAI(); animate();
+        // --- 5. 启动 ---
+        resize();
+        window.onresize = resize;
+        preloadImages(() => {
+            console.log("Gallery ready.");
+            setupAI();
+            animate();
+        });
     </script>
 </body>
 </html>
