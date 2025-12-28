@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 影像馆 - 灵敏聚焦版</title>
+    <title>2026 影像馆 - 终极整合版</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
-        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; }
+        canvas { display: block; filter: contrast(1.1) saturate(1.3); }
+        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; letter-spacing: 5px; opacity: 0.7; }
         #status {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 0.9rem; background: rgba(255,255,255,0.1);
-            padding: 10px 25px; border-radius: 30px; backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2); z-index: 100; transition: 0.3s;
+            color: #fff; font-size: 0.9rem; background: rgba(255,255,255,0.05);
+            padding: 12px 30px; border-radius: 50px; backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1); z-index: 100; transition: 0.4s;
         }
-        .active-status { border-color: #ffd700; box-shadow: 0 0 15px #ffd700; color: #ffd700; }
+        .active-status { border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.4); color: #ffd700; }
         video { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui"><h1 style="font-weight:200; letter-spacing:5px;">STARS GALLERY</h1></div>
-    <div id="status">正在开启摄像头...</div>
+    <div id="ui"><h1 style="font-weight:200;">STARS & MEMORIES 2026</h1></div>
+    <div id="status">正在同步星系频率...</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -33,10 +33,57 @@
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
-        let w, h, dpr, photos = [], particles = [];
-        let isHandVisible = false, isPinching = false;
+        let w, h, dpr, photos = [], particles = [], rockets = [];
+        let isStarMode = false, isPinching = false, galaxyTime = 0;
         let handX = 0.5, handY = 0.5, currentFocusIndex = 0, zoomLerp = 0;
 
+        // --- 1. 背景粒子与烟花逻辑 ---
+        class Particle {
+            constructor(x, y, z, hue) {
+                this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
+                this.orbitRadius = 300 + Math.random() * 800;
+                this.orbitAngle = Math.random() * Math.PI * 2;
+                this.orbitSpeed = (Math.random() - 0.5) * 0.003;
+                const v = 6 + Math.random() * 8; const ang = Math.random() * Math.PI * 2; const p = Math.random() * Math.PI;
+                this.vx = Math.sin(p) * Math.cos(ang) * v; this.vy = Math.sin(p) * Math.sin(ang) * v; this.vz = Math.cos(p) * v;
+            }
+            update() {
+                if (isStarMode) {
+                    let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
+                    this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.04;
+                    this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.04;
+                    this.alpha = 0.4 + Math.sin(galaxyTime * 0.05) * 0.2;
+                } else {
+                    this.vx *= 0.96; this.vy *= 0.96; this.vz *= 0.96; this.vy += 0.08;
+                    this.x += this.vx; this.y += this.vy; this.z += this.vz;
+                    this.alpha -= 0.015;
+                }
+            }
+            draw(rx, ry) {
+                if (this.alpha <= 0) return;
+                const p = project(this.x, this.y, this.z, rx, ry);
+                if (p.z < -300) return;
+                // 捏合时背景粒子变淡
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (1 - zoomLerp * 0.85)})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, p.s * 3), 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        class Rocket {
+            constructor() {
+                this.x = (Math.random()-0.5)*500; this.y = 800; this.z = (Math.random()-0.5)*500;
+                this.targetY = -100-Math.random()*400; this.hue = Math.random()*360; this.done = false;
+            }
+            update() { this.y -= 15; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
+            draw(rx, ry) {
+                const p = project(this.x, this.y, this.z, rx, ry);
+                ctx.fillStyle = `rgba(255,255,255,${1 - zoomLerp})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+            explode() { for (let i = 0; i < 50; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
+        }
+
+        // --- 2. 核心系统 ---
         function preloadImages(callback) {
             let loadedCount = 0;
             imageUrls.forEach((url, i) => {
@@ -45,7 +92,7 @@
                     loadedCount++;
                     const angleSpacing = Math.PI * 0.8 / 12;
                     const angle = -Math.PI * 0.4 + i * angleSpacing;
-                    photos.push({ img, angle, baseX: 550 * Math.cos(angle), baseZ: 550 * Math.sin(angle) + 200 });
+                    photos.push({ img, baseX: 550 * Math.cos(angle), baseZ: 550 * Math.sin(angle) + 200 });
                     if (loadedCount === 13) callback();
                 };
                 img.src = url;
@@ -69,42 +116,48 @@
         }
 
         function animate() {
-            ctx.fillStyle = `rgba(0,0,0,${0.3 + zoomLerp * 0.5})`;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = `rgba(0,0,5,${0.3 + zoomLerp * 0.5})`;
             ctx.fillRect(0, 0, w, h);
 
-            if (photos.length === 13) {
-                // 1. 目标计算
+            const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
+            const rotX = (handY - 0.5) * (1 - zoomLerp * 0.95);
+            if (isStarMode) galaxyTime++;
+
+            // 绘制烟花与粒子
+            ctx.globalCompositeOperation = 'lighter';
+            if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
+            rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
+            particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
+
+            // 绘制照片
+            if (photos.length === 13 && isStarMode) {
+                ctx.globalCompositeOperation = 'source-over';
                 let targetIdx = (1.0 - handX) * 12;
                 currentFocusIndex += (targetIdx - currentFocusIndex) * 0.1;
                 zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.15;
 
-                // 2. 交互状态
-                const rotY = (handX - 0.5) * (1 - zoomLerp * 0.9);
-                const rotX = (handY - 0.5) * (1 - zoomLerp * 0.9);
-
-                // 3. 绘制照片
                 photos.forEach((pData, i) => {
                     let dist = Math.abs(i - currentFocusIndex);
                     let focusFactor = Math.max(0, 1 - dist * 0.4);
                     let isTarget = i === Math.round(currentFocusIndex);
 
-                    // 极致隔离逻辑：如果是捏合状态，非目标图片透明度直接降为 0
-                    let baseAlpha = 0.2 + focusFactor * 0.8;
-                    let targetAlpha = isTarget ? 1.0 : 0.0;
-                    ctx.globalAlpha = baseAlpha + (targetAlpha - baseAlpha) * zoomLerp;
+                    let normalAlpha = 0.2 + focusFactor * 0.8;
+                    let targetAlpha = isTarget ? 1.0 : 0.0; // 非目标图捏合时完全消失
+                    ctx.globalAlpha = normalAlpha + (targetAlpha - normalAlpha) * zoomLerp;
 
                     if (ctx.globalAlpha <= 0.01) return;
 
-                    let zOff = 200 + (isTarget ? (zoomLerp * 500) : (zoomLerp * 1000));
+                    let zOff = 200 + (isTarget ? (zoomLerp * 500) : (zoomLerp * 1200));
                     let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
 
-                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 3.0 : 0);
+                    let scale = (0.2 + focusFactor * 0.8) + (isTarget ? zoomLerp * 3.5 : 0);
                     let iw = pData.img.width * p.s * scale * 0.4;
                     let ih = pData.img.height * p.s * scale * 0.4;
 
                     if (isTarget && zoomLerp > 0.1) {
-                        ctx.shadowBlur = 40 * zoomLerp;
-                        ctx.shadowColor = "#fff";
+                        ctx.shadowBlur = 50 * zoomLerp;
+                        ctx.shadowColor = "rgba(255,255,255,0.8)";
                     }
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
                     ctx.shadowBlur = 0;
@@ -118,30 +171,32 @@
         async function setupAI() {
             const status = document.getElementById('status');
             const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-            
-            // 降低识别门槛，让弱光下更容易识别
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
             
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
-                    isHandVisible = true;
                     const h = res.multiHandLandmarks[0];
                     handX = h[9].x; handY = h[9].y;
 
-                    // 核心修改：放宽捏合判定 (0.1 是很宽松的范围)
+                    // 1. 判断是否张开手掌 (星河/照片模式)
+                    isStarMode = Math.hypot(h[8].x - h[0].x, h[8].y - h[0].y) > 0.35;
+                    
+                    // 2. 判断捏合 (放大模式)
                     const pinchDist = Math.hypot(h[8].x - h[4].x, h[8].y - h[4].y);
-                    isPinching = pinchDist < 0.1; 
+                    isPinching = isStarMode && pinchDist < 0.1; 
 
                     if (isPinching) {
-                        status.innerText = "✨ 正在放大视角";
+                        status.innerText = "✨ 极致聚焦：正在放大影像";
                         status.classList.add('active-status');
+                    } else if (isStarMode) {
+                        status.innerText = "🌌 滑动切换影像 | 捏合指尖放大";
+                        status.classList.remove('active-status');
                     } else {
-                        status.innerText = "🌌 左右滑动切换照片 | 捏合指尖放大";
+                        status.innerText = "🎆 握拳：燃放星火烟火";
                         status.classList.remove('active-status');
                     }
                 } else {
-                    isHandVisible = false;
-                    status.innerText = "👋 请在镜头前展示手掌";
+                    status.innerText = "👋 欢迎来到 2026 影像馆";
                 }
             });
 
@@ -152,11 +207,7 @@
             cam.start();
         }
 
-        resize();
-        window.onresize = resize;
-        preloadImages(() => { console.log("Images Ready"); });
-        setupAI();
-        animate();
+        resize(); window.onresize = resize; preloadImages(() => {}); setupAI(); animate();
     </script>
 </body>
 </html>
