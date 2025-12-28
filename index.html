@@ -8,55 +8,74 @@
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
         #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); }
         
-        /* 文字容器设计 */
         #title-container {
-            position: absolute; 
-            top: 15%; 
-            width: 100%; 
-            text-align: center; 
-            pointer-events: none; 
-            z-index: 10;
+            position: absolute; top: 12%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
+            /* 稍微调整位置，让它离蛋糕顶部更近一点，构图更紧凑 */
+            transform: translateY(20px); 
         }
 
+        /* --- 核心修改：全新的艺术字设计 --- */
         #main-title {
+            /* 字体基础设置 */
             font-family: 'ZCOOL XiaoWei', serif; 
-            font-size: 5rem; 
+            font-size: 6rem; /* 稍微加大一点气势 */
             font-weight: normal; 
             margin: 0; 
             padding: 0 20px; 
             letter-spacing: 0.1em;
-            /* 香槟金渐变 */
-            background: linear-gradient(to bottom, #ffffff 10%, #fdfcdc 30%, #e6c778 60%, #c0a060 90%);
-            background-size: 100% 200%; 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent;
-            /* 柔和的发光感 */
-            filter: drop-shadow(0 0 15px rgba(230, 199, 120, 0.5));
-            animation: titleBreath 4s ease-in-out infinite alternate;
+            line-height: 1.1;
+            
+            /* 1. 复杂的玫瑰金流光渐变色 */
+            color: transparent;
+            background-image: linear-gradient(
+                135deg,
+                #FFF5E1 0%,    /* 珍珠白高光 */
+                #FFD1DC 25%,   /* 柔和玫瑰粉 */
+                #E6C778 50%,   /* 经典香槟金 */
+                #FF8C00 75%,   /* 暖橙烛光色 */
+                #C0A060 100%   /* 深邃暗金阴影 */
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+
+            /* 2. 艺术浮雕立体质感（关键！） */
+            /* 通过多层微小的偏移阴影模拟边缘高光和立体厚度 */
+            text-shadow: 
+                0px 2px 3px rgba(255,255,255,0.4), /* 顶部边缘高光 */
+                1px 1px 2px rgba(0,0,0,0.2),       /* 细微的内部阴影增加定义 */
+                0px 5px 15px rgba(230, 150, 100, 0.5), /* 中层柔和的暖光晕 */
+                0px 10px 40px rgba(230, 199, 120, 0.3); /* 外层大气的氛围光 */
+
+            /* 3. 动态流光动画 */
+            animation: artisticShimmer 6s linear infinite alternate;
         }
 
+        /* 数字部分继承并强化风格 */
         #main-title span {
             font-family: 'Playfair Display', serif; 
             font-style: italic; 
             font-weight: 900; 
-            font-size: 6.5rem; 
-            margin-right: 10px; 
-            letter-spacing: -0.02em; 
+            font-size: 7.5rem; /* 数字更大更突出 */
+            margin-right: 15px; 
+            letter-spacing: -0.03em; 
             vertical-align: middle;
-            -webkit-text-fill-color: #fff; /* 数字使用亮白色突出 */
-            text-shadow: 0 0 30px rgba(255,255,255,0.4);
+            /* 让数字稍微亮一点，更接近珍珠白 */
+            filter: brightness(1.1); 
         }
 
-        @keyframes titleBreath {
-            from { transform: scale(1); opacity: 0.9; }
-            to { transform: scale(1.03); opacity: 1; }
+        /* 新的流光动画关键帧 */
+        @keyframes artisticShimmer {
+            0% { background-position: 0% 50%; filter: brightness(1); }
+            100% { background-position: 100% 50%; filter: brightness(1.15); }
         }
+        /* ---------------------------------- */
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); 
-            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(230,199,120,0.3);
-            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
+            color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); 
+            padding: 14px 40px; border-radius: 50px; border: 1px solid rgba(230,199,120,0.3);
+            backdrop-filter: blur(20px); font-size: 0.85rem; z-index: 100; letter-spacing: 2px;
         }
         
         #video-input { display: none; }
@@ -114,6 +133,7 @@
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
             for(let i=1; i<=IMG_COUNT; i++) {
+                // 确保本地有 ./mj/1.jpg 到 ./mj/10.jpg
                 const texture = loader.load(`./mj/${i}.jpg`, undefined, undefined, () => {});
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
@@ -123,7 +143,7 @@
                 imageGroup.add(mesh);
             }
 
-            // --- 结构化粒子蛋糕设计 ---
+            // --- 结构化粒子蛋糕设计 (保持淡雅清新主题) ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
@@ -203,7 +223,7 @@
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 posAttr.array[i*3] = currentPos[i].x;
                 posAttr.array[i*3+1] = currentPos[i].y + Math.sin(now * 0.002 + i) * 0.04;
-                posAttr.array[i*3+2] = currentPos[i].z; // 修正后的Z轴
+                posAttr.array[i*3+2] = currentPos[i].z; 
             }
             posAttr.needsUpdate = true;
             renderer.render(scene, camera);
