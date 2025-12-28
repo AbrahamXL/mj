@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 mj 星河影像馆</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
+        
+        /* 顶部标题 UI */
+        #ui {
+            position: absolute; top: 6%; width: 100%; text-align: center; color: #fff;
+            pointer-events: none; z-index: 10; letter-spacing: 5px;
+        }
+        h1 { font-size: 1.6rem; font-weight: 200; margin: 0; text-shadow: 0 0 20px #fff; }
+
+        /* 底部状态提示 UI */
+        #status {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 0.85rem; letter-spacing: 2px;
+            background: rgba(255,255,255,0.1); padding: 12px 35px; border-radius: 50px;
+            backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.2); z-index: 100;
+            white-space: nowrap; transition: all 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .highlight { color: #ffd700; border-color: #ffd700 !important; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        
+        /* 隐藏摄像头预览视频 */
+        video { display: none; }
+    </style>
+</head>
+<body>
+    <div id="ui"><h1>GALLERY OF TIME 2026</h1></div>
+    <div id="status">系统启动中...</div>
+    <canvas id="c"></canvas>
+    <video id="v" playsinline></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <script>
+        /**
+         * 1. 资源配置
+         * 路径指向你提到的 mj 文件夹中的 1-13.jpg
+         */
+        const imageUrls = Array.from({length: 13}, (_, i) => ${i + 1}.jpg);
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let w, h, dpr, particles = [], rockets = [], photos = [];
+        let isStarMode = false, isPinching = false;
+        let handX = 0.5, handY = 0.5, rotX = 0, rotY = 0;
+        let galaxyTime = 0, currentFocusIndex = 0, zoomLerp = 0;
+        let allImagesReady = false;
+
+        // --- 图片容错加载器 ---
+        function preloadImages(callback) {
+            let loadedCount = 0;
+            const statusBox = document.getElementById('status');
+            
+            imageUrls.forEach((url, i) => {
+                const img = new Image();
+                // 如果是本地测试，不需要 crossOrigin，但为了 Vercel 部署建议保留
+                img.crossOrigin = "Anonymous"; 
+                
+                const onComplete = () => {
+                    loadedCount++;
+                    statusBox.innerText = `影像装填中 (${loadedCount}/13)`;
+                    if (loadedCount === imageUrls.length) {
+                        allImagesReady = true;
+                        callback();
+                    }
+                };
+
+                img.onload = () => {
+                    // 螺旋布局算法
+                    const angle = (i / 13) * Math.PI * 2 * 1.2;
+                    const radius = 400 + i * 20;
+                    photos.push({ 
+                        img, 
+                        baseX: radius * Math.cos(angle), 
+                        baseY: (i - 6) * 60, 
+                        baseZ: radius * Math.sin(angle), 
+                        x: 0, y: 0, z: 0 
+                    });
+                    onComplete();
+                };
+
+                img.onerror = () => {
+                    console.error(`无法加载图片: ${url}，请检查路径是否正确`);
+                    onComplete(); // 即使失败也继续，防止页面卡死
+                };
+                img.src = url;
+            });
+        }
+
+        // --- 基础引擎函数 ---
+        function resize() {
+            w = window.innerWidth; h = window.innerHeight;
+            dpr = Math.min(window.devicePixelRatio, 2);
+            canvas.width = w * dpr; canvas.height = h * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        function project(x, y, z) {
+            let x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
+            let z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
+            let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+            let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+            const scale = 600 / (600 + z2 + 100); 
+            return { x: x1 * scale + w / 2, y: y2 * scale + h / 2, scale, z: z2 };
+        }
+
+        // --- 烟花与星辰粒子系统 ---
+        class Particle {
+            constructor(x, y, z, hue) {
+                this.x = x; this.y = y; this.z = z; this.hue = hue; this.alpha = 1;
+                this.orbitRadius = 300 + Math.random() * 800;
+                this.orbitAngle = Math.random() * Math.PI * 2;
+                this.orbitSpeed = (Math.random() - 0.5) * 0.003;
+                const v = 6 + Math.random() * 8;
+                const ang = Math.random() * Math.PI * 2;
+                const p = Math.random() * Math.PI;
+                this.vx = Math.sin(p) * Math.cos(ang) * v;
+                this.vy = Math.sin(p) * Math.sin(ang) * v;
+                this.vz = Math.cos(p) * v;
+            }
+            update() {
+                if (isStarMode) {
+                    let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
+                    this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.04;
+                    this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.04;
+                    this.alpha = 0.5 + Math.sin(galaxyTime * 0.05) * 0.3;
+                } else {
+                    this.vx *= 0.96; this.vy *= 0.96; this.vz *= 0.96; this.vy += 0.08;
+                    this.x += this.vx; this.y += this.vy; this.z += this.vz;
+                    this.alpha -= 0.015;
+                }
+            }
+            draw() {
+                if (this.alpha <= 0) return;
+                const p = project(this.x, this.y, this.z);
+                if (p.z < -300) return;
+                ctx.beginPath();
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha * (isPinching ? 0.3 : 1)})`;
+                ctx.arc(p.x, p.y, Math.max(1, p.scale * 4), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Rocket {
+            constructor() {
+                this.x = (Math.random()-0.5)*400; this.y = 800; this.z = (Math.random()-0.5)*400;
+                this.targetY = -100-Math.random()*300; this.hue = Math.random()*360; this.done = false;
+            }
+            update() { this.y -= 15; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
+            draw() { const p = project(this.x, this.y, this.z); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill(); }
+            explode() { for (let i = 0; i < 60; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue)); }
+        }
+
+        // --- 主渲染循环 ---
+        function animate() {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = isPinching ? 'rgba(5, 5, 10, 0.7)' : 'rgba(8, 8, 20, 0.3)';
+            ctx.fillRect(0, 0, w, h);
+
+            rotY += ((handX - 0.5) * 3.0 - rotY) * 0.05;
+            rotX += ((handY - 0.5) * 2.0 - rotX) * 0.05;
+            if (isStarMode) galaxyTime += 1;
+
+            ctx.globalCompositeOperation = 'lighter';
+            if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
+            rockets.forEach((r, i) => { r.update(); r.draw(); if (r.done) rockets.splice(i, 1); });
+            particles.forEach((p, i) => { p.update(); p.draw(); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
+
+            // 绘制照片
+            if (isStarMode && allImagesReady) {
+                ctx.globalCompositeOperation = 'source-over';
+                let targetIdx = (1.0 - handX) * (photos.length - 1);
+                currentFocusIndex += (targetIdx - currentFocusIndex) * 0.1;
+                zoomLerp += ((isPinching ? 1 : 0) - zoomLerp) * 0.15;
+
+                photos.forEach((pData, i) => {
+                    let dist = Math.abs(i - currentFocusIndex);
+                    let focusFactor = Math.max(0, 1 - dist * 0.6);
+                    let currentZoom = (i === Math.round(currentFocusIndex)) ? zoomLerp : 0;
+
+                    pData.x = pData.baseX * (1 - focusFactor);
+                    pData.y = pData.baseY * (1 - focusFactor);
+                    pData.z = pData.baseZ * (1 - focusFactor) + (300 + currentZoom * 150) * focusFactor;
+
+                    const p = project(pData.x, pData.y, pData.z);
+                    if (p.z < -250) return;
+
+                    let baseScale = 0.4 + focusFactor * 0.6 + currentZoom * 0.8;
+                    let imgW = pData.img.width * p.scale * baseScale * 0.4;
+                    let imgH = pData.img.height * p.scale * baseScale * 0.4;
+
+                    ctx.globalAlpha = 0.4 + focusFactor * 0.6;
+                    if (focusFactor > 0.8) {
+                        ctx.shadowBlur = 20 + currentZoom * 30;
+                        ctx.shadowColor = isPinching ? '#fff' : 'rgba(255,215,0,0.5)';
+                    }
+                    ctx.drawImage(pData.img, p.x - imgW/2, p.y - imgH/2, imgW, imgH);
+                    ctx.shadowBlur = 0;
+                });
+                ctx.globalAlpha = 1;
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // --- 手势识别设置 ---
+        async function setupAI() {
+            const status = document.getElementById('status');
+            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.8 });
+            
+            hands.onResults(res => {
+                if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                    const h = res.multiHandLandmarks[0];
+                    // 判断张手：食指尖到掌根的距离
+                    isStarMode = Math.hypot(h[8].x - h[0].x, h[8].y - h[0].y) > 0.4;
+                    // 判断捏合：大拇指尖(4)到食指尖(8)的距离
+                    const pinchDist = Math.hypot(h[8].x - h[4].x, h[8].y - h[4].y);
+                    isPinching = isStarMode && pinchDist < 0.06;
+                    
+                    handX = h[9].x; handY = h[9].y;
+                    
+                    if (isPinching) {
+                        status.innerText = "🔍 正在放大查看...";
+                        status.classList.add("highlight");
+                    } else if (isStarMode) {
+                        status.innerText = "🌌 滑动浏览 mj 影像 | 捏合放大";
+                        status.classList.remove("highlight");
+                    } else {
+                        status.innerText = "🎆 握拳燃放烟火 | 张手开启星河";
+                        status.classList.remove("highlight");
+                    }
+                }
+            });
+
+            const cam = new Camera(document.getElementById('v'), {
+                onFrame: async () => { await hands.send({ image: document.getElementById('v') }); },
+                width: 640, height: 480
+            });
+            cam.start().then(() => {
+                if (!status.innerText.includes("装填")) status.innerText = "✅ 系统就绪，请张开手掌";
+            });
+        }
+
+        // 启动
+        resize();
+        window.onresize = resize;
+        preloadImages(() => { console.log("所有影像已就绪"); });
+        setupAI();
+        animate();
+    </script>
+</body>
+</html>
