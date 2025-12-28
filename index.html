@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Star & Cake</title>
+    <title>2026 Auto-Start Gallery</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400&family=Syncopate:wght@700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -35,7 +35,7 @@
     <div id="ui">
         <h1 class="year">2026</h1>
         <div class="subtitle">祝你开心</div>
-        <div id="status">点击屏幕开启</div>
+        <div id="status">系统准备中...</div>
     </div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
@@ -47,21 +47,20 @@
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
         const totalPhotos = 10;
-        let w, h, dpr, photos = [], bgStars = [], rockets = [], explosions = [];
+        let w, h, dpr, photos = [], bgStars = [], explosions = [];
         let isHandVisible = false, isPinching = false, handX = 0;
         let gatherLerp = 0, time = 0;
 
-        // 蛋糕坐标 (3D)
         const cakeCoords = [];
-        for(let i=0; i<5; i++) { // 底层
+        for(let i=0; i<5; i++) { 
             let a = (i/5)*Math.PI*2; 
             cakeCoords.push({x: Math.cos(a)*180, y: 150, z: Math.sin(a)*180});
         }
-        for(let i=0; i<3; i++) { // 中层
+        for(let i=0; i<3; i++) { 
             let a = (i/3)*Math.PI*2 + 0.5;
             cakeCoords.push({x: Math.cos(a)*100, y: 0, z: Math.sin(a)*100});
         }
-        for(let i=0; i<2; i++) { // 顶层
+        for(let i=0; i<2; i++) { 
             let a = (i/2)*Math.PI*2;
             cakeCoords.push({x: Math.cos(a)*40, y: -120, z: Math.sin(a)*40});
         }
@@ -71,7 +70,6 @@
             dpr = Math.min(window.devicePixelRatio || 1, 2);
             canvas.width = w * dpr; canvas.height = h * dpr;
             ctx.scale(dpr, dpr);
-            // 初始化背景繁星粒子
             bgStars = [];
             for(let i=0; i<150; i++) {
                 bgStars.push({
@@ -87,7 +85,6 @@
             return { x: x * s + w/2, y: y * s + h/2, scale: s };
         }
 
-        // 烟花逻辑
         class Explosion {
             constructor(x, y, hue) {
                 this.p = [];
@@ -116,7 +113,6 @@
             ctx.fillStyle = 'rgba(0, 0, 5, 0.3)';
             ctx.fillRect(0, 0, w, h);
 
-            // 1. 背景繁星漂浮
             bgStars.forEach(s => {
                 s.z -= 2; if(s.z < 0) s.z = 1000;
                 let p = project(s.x, s.y, s.z);
@@ -124,14 +120,12 @@
                 ctx.beginPath(); ctx.arc(p.x, p.y, s.size * p.scale, 0, Math.PI*2); ctx.fill();
             });
 
-            // 2. 烟花
             if (Math.random() < (isPinching ? 0.08 : 0.02)) {
                 explosions.push(new Explosion(Math.random()*w, Math.random()*h*0.6, Math.random()*360));
             }
             explosions.forEach(e => { e.update(); e.draw(); });
             explosions = explosions.filter(e => e.p.length > 0);
 
-            // 3. 照片处理
             if (photos.length > 0) {
                 let targetGather = isPinching ? 1 : 0;
                 gatherLerp += (targetGather - gatherLerp) * 0.1;
@@ -141,19 +135,16 @@
 
                 let renderQueue = [];
                 photos.forEach((pData, i) => {
-                    // 散开位置：随机在 3D 空间漂浮
                     let sx = pData.seedX + Math.sin(time + i)*50;
                     let sy = pData.seedY + Math.cos(time + i)*50;
                     let sz = pData.seedZ + Math.sin(time*0.5 + i)*100;
 
-                    // 蛋糕位置：旋转
                     let target = cakeCoords[i];
                     let rot = time * 0.8;
                     let tx = target.x * Math.cos(rot) - target.z * Math.sin(rot);
                     let tz = target.x * Math.sin(rot) + target.z * Math.cos(rot);
                     let ty = target.y;
 
-                    // 插值
                     let x = sx + (tx - sx) * gatherLerp;
                     let y = sy + (ty - sy) * gatherLerp;
                     let z = sz + (tz - sz) * gatherLerp;
@@ -185,6 +176,7 @@
         }
 
         async function initAI() {
+            document.getElementById('status').innerText = "📷 正在启动相机...";
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
             hands.onResults(res => {
@@ -192,21 +184,30 @@
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
                     isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.05;
-                    document.getElementById('status').innerText = isPinching ? "🎂 生日快乐！" : "👋 捏合手指汇聚蛋糕";
+                    document.getElementById('status').innerText = isPinching ? "🎂 生日快乐！" : "👋 已就绪：捏合手指汇聚蛋糕";
                 } else {
                     isHandVisible = false; isPinching = false;
-                    document.getElementById('status').innerText = "🔍 寻找手掌...";
+                    document.getElementById('status').innerText = "🔍 寻找手掌中...";
                 }
             });
+
             const cam = new Camera(document.getElementById('v'), {
                 onFrame: async () => { await hands.send({image: document.getElementById('v')}); },
                 width: 320, height: 240
             });
-            window.addEventListener('touchstart', () => { cam.start(); }, {once: true});
+
+            // 核心修改：直接调用 start()，不再等待 touchstart
+            cam.start().catch(err => {
+                console.log("Autostart blocked, waiting for touch");
+                document.getElementById('status').innerText = "⚠️ 请点击屏幕开启相机";
+                // 备用方案：如果自动启动被拦截，点击任何地方都会再次尝试
+                window.addEventListener('click', () => { cam.start(); }, {once: true});
+            });
         }
 
         resize();
         window.addEventListener('resize', resize);
+        
         let loaded = 0;
         for(let i=1; i<=totalPhotos; i++) {
             const img = new Image(); img.crossOrigin = "anonymous";
@@ -214,12 +215,14 @@
             img.onload = () => {
                 photos.push({
                     img, 
-                    // 初始散开种子坐标
                     seedX: (Math.random()-0.5)*w*1.5,
                     seedY: (Math.random()-0.5)*h*1.5,
                     seedZ: Math.random()*500
                 });
-                if(++loaded === totalPhotos) { initAI(); animate(); }
+                if(++loaded === totalPhotos) { 
+                    initAI(); 
+                    animate(); 
+                }
             };
         }
     </script>
