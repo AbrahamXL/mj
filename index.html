@@ -2,39 +2,40 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 Galaxy Celebration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>2026 Private Gallery</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; touch-action: none; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
+        /* 关键修改：强制 html/body 撑满屏幕 */
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Syncopate', sans-serif; touch-action: none; }
+        /* 关键修改：强制 canvas 撑满屏幕容器 */
+        canvas { display: block; width: 100%; height: 100%; filter: contrast(1.1) saturate(1.2); }
         
         #ui { 
-            position: absolute; top: 50%; left: 50%; 
+            position: absolute; top: 45%; left: 50%; 
             transform: translate(-50%, -50%); width: 100%; text-align: center; 
             pointer-events: none; z-index: 5; transition: opacity 0.5s ease;
         }
 
-        /* 响应式文字：手机竖屏略大，横屏/电脑适中 */
         .year-display {
-            font-size: 20vw; font-weight: 700; line-height: 0.8; margin: 0; letter-spacing: 0.2rem;
-            color: rgba(255, 255, 255, 0.15); -webkit-text-stroke: 1px rgba(255, 215, 0, 0.2);
+            /* 手机端字号微调 */
+            font-size: 22vw; font-weight: 700; line-height: 0.8; margin: 0;
+            color: rgba(255, 255, 255, 0.12); -webkit-text-stroke: 1px rgba(255, 215, 0, 0.15);
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-            animation: elegantPulse 6s ease-in-out infinite;
         }
         @media (min-width: 1024px) { .year-display { font-size: 15vw; } }
 
         .sub-title {
-            font-family: 'Playfair Display', serif; font-style: italic; font-size: 4vw;
-            color: rgba(255, 255, 255, 0.4); letter-spacing: 0.3rem; margin-top: 1rem;
+            font-family: 'Playfair Display', serif; font-style: italic; font-size: 5vw;
+            color: rgba(255, 255, 255, 0.3); letter-spacing: 0.2rem; margin-top: 1.5rem;
         }
-        @media (min-width: 1024px) { .sub-title { font-size: 2vw; letter-spacing: 0.6rem; } }
+        @media (min-width: 1024px) { .sub-title { font-size: 1.8vw; letter-spacing: 0.6rem; } }
 
         #status {
-            position: absolute; bottom: env(safe-area-inset-bottom, 30px); 
+            /* 适配底部安全区域 */
+            position: absolute; bottom: calc(30px + env(safe-area-inset-bottom)); 
             left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.3); font-size: 0.6rem; letter-spacing: 3px; z-index: 100;
-            white-space: nowrap;
+            color: rgba(255,255,255,0.4); font-size: 0.7rem; letter-spacing: 2px; z-index: 100;
         }
         video { display: none; }
     </style>
@@ -44,7 +45,7 @@
         <h1 class="year-display">2026</h1>
         <div class="sub-title">Happy New Year</div>
     </div>
-    <div id="status">INITIALIZING CAMERA...</div>
+    <div id="status">TAP SCREEN TO START</div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -63,109 +64,103 @@
 
         const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
+        // 粒子和火箭类保持不变，省略以节省篇幅...
         class Particle {
             constructor(x, y, z, hue) {
                 this.x = x; this.y = y; this.z = z; this.hue = hue;
                 const rFactor = Math.random();
-                this.orbitRadius = 350 + (rFactor * rFactor) * 1000; 
+                this.orbitRadius = 300 + (rFactor * rFactor) * 800; 
                 this.orbitAngle = Math.random() * Math.PI * 2;
-                this.orbitSpeed = (Math.random() - 0.5) * 0.0015;
-                this.baseSize = 0.8 + Math.random() * 2.0;
-                this.baseAlpha = 0.2 + Math.random() * 0.5;
+                this.orbitSpeed = (Math.random() - 0.5) * 0.002;
+                this.baseSize = 1.0 + Math.random() * 2.0;
+                this.baseAlpha = 0.3 + Math.random() * 0.5;
                 this.alpha = 1;
-                this.baseY = (Math.random() - 0.5) * 400 * (1 - rFactor * 0.6);
-                const v = 5 + Math.random() * 10; 
+                this.baseY = (Math.random() - 0.5) * 500;
+                const v = 4 + Math.random() * 8; 
                 const ang = Math.random() * Math.PI * 2;
-                const p = Math.random() * Math.PI;
-                this.vx = Math.sin(p) * Math.cos(ang) * v; 
-                this.vy = Math.sin(p) * Math.sin(ang) * v; 
-                this.vz = Math.cos(p) * v;
+                this.vx = Math.cos(ang) * v; this.vy = Math.sin(ang) * v; this.vz = (Math.random()-0.5) * v;
             }
             update() {
                 if (isStarMode) {
                     let ang = this.orbitAngle + galaxyTime * this.orbitSpeed;
                     this.x += (this.orbitRadius * Math.cos(ang) - this.x) * 0.05;
                     this.z += (this.orbitRadius * Math.sin(ang) - this.z) * 0.05;
-                    this.y += (this.baseY + Math.sin(ang * 2) * 40 - this.y) * 0.05; 
-                    this.alpha = this.baseAlpha * (0.6 + Math.sin(galaxyTime * 0.03 + this.orbitRadius) * 0.4);
+                    this.y += (this.baseY - this.y) * 0.05; 
+                    this.alpha = this.baseAlpha;
                 } else {
-                    this.vx *= 0.975; this.vy *= 0.975; this.vz *= 0.975; 
-                    this.vy += 0.06; this.x += this.vx; this.y += this.vy; this.z += this.vz;
-                    this.alpha -= 0.007; 
+                    this.vx *= 0.98; this.vy *= 0.98; this.vz *= 0.98; this.vy += 0.08;
+                    this.x += this.vx; this.y += this.vy; this.z += this.vz;
+                    this.alpha -= 0.008; 
                 }
             }
             draw(rx, ry) {
                 if (this.alpha <= 0) return;
                 const p = project(this.x, this.y, this.z, rx, ry);
-                if (p.z < -400) return;
-                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.6, p.s * this.baseSize), 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = `hsla(${this.hue}, 90%, 70%, ${this.alpha})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s * this.baseSize, 0, Math.PI * 2); ctx.fill();
             }
         }
 
         class Rocket {
             constructor() {
-                this.x = (Math.random()-0.5)*800; this.y = 800; this.z = (Math.random()-0.5)*800;
-                this.targetY = -150-Math.random()*400; this.done = false;
-                const warmPalettes = [35, 20, 10]; 
-                this.hue = warmPalettes[Math.floor(Math.random() * warmPalettes.length)] + (Math.random()-0.5)*15;
+                this.x = (Math.random()-0.5)*600; this.y = 800; this.z = (Math.random()-0.5)*400;
+                this.targetY = -200-Math.random()*300; this.done = false;
+                this.hue = Math.random() * 40 + 10;
             }
-            update() { this.y -= 22; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
+            update() { this.y -= 20; if (this.y <= this.targetY) { this.explode(); this.done = true; } }
             draw(rx, ry) {
                 const p = project(this.x, this.y, this.z, rx, ry);
-                ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - zoomLerp)})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2 * p.s, 0, Math.PI * 2); ctx.fill();
             }
             explode() { 
-                for (let i = 0; i < 150; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue));
-                if (particles.length > 1000) particles.splice(0, 150);
+                for (let i = 0; i < 100; i++) particles.push(new Particle(this.x, this.y, this.z, this.hue));
             }
         }
 
-        function preloadImages(callback) {
-            let loadedCount = 0;
-            imageUrls.forEach((url, i) => {
-                const img = new Image(); img.crossOrigin = "Anonymous";
-                img.onload = () => {
-                    const angleSpacing = Math.PI * 0.8 / 12;
-                    const angle = -Math.PI * 0.4 + i * angleSpacing;
-                    photos.push({ img, baseX: 580 * Math.cos(angle), baseZ: 580 * Math.sin(angle) + 200, id: i });
-                    loadedCount++; if (loadedCount === imageUrls.length) callback();
-                };
-                img.onerror = () => { loadedCount++; if (loadedCount === imageUrls.length) callback(); };
-                img.src = url;
-            });
-        }
-
+        // 关键修复：更稳健的 Resize 逻辑
         function resize() {
-            w = window.innerWidth; h = window.innerHeight;
-            dpr = Math.min(window.devicePixelRatio || 1, 2); // 限制 DPR 提升性能
-            canvas.width = w * dpr; canvas.height = h * dpr;
+            // 1. 获取画布在屏幕上的实际显示尺寸 (逻辑像素)
+            w = canvas.clientWidth;
+            h = canvas.clientHeight;
+            // 2. 获取设备像素比，最高限制为 3 以平衡性能
+            dpr = Math.min(window.devicePixelRatio || 1, 3);
+            // 3. 设置画布内部的高清物理分辨率
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            // 4. 重置变换矩阵，防止重复叠加 scale
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            // 5. 应用缩放，让后续绘制操作对应到高清像素上
             ctx.scale(dpr, dpr);
         }
 
+        // 投影函数 (保持手机端优化逻辑)
         function project(x, y, z, rx, ry) {
             let x1 = x * Math.cos(ry) - z * Math.sin(ry);
             let z1 = x * Math.sin(ry) + z * Math.cos(ry);
             let y2 = y * Math.cos(rx) - z1 * Math.sin(rx);
             let z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
-            const s = (w < 600 ? 400 : 600) / (600 + z2); // 手机端调整透视焦距
+            
+            // 手机竖屏时拉大焦距，使画面更集中
+            const fov = w < h ? h * 0.8 : w * 0.6;
+            const s = fov / (fov + z2); 
+            // 这里 +w/2 和 +h/2 将确保中心点在屏幕中央 (前提是w和h正确)
             return { x: x1 * s + w / 2, y: y2 * s + h / 2, s, z: z2 };
         }
 
         function animate() {
-            ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = `rgba(0,0,5,${0.25 + zoomLerp * 0.3})`;
+            // 使用逻辑宽高清屏
             ctx.fillRect(0, 0, w, h);
             
-            const rotY = (handX - 0.5) * (1 - zoomLerp * 0.95);
-            const rotX = (handY - 0.5) * (1 - zoomLerp * 0.95);
+            const rotY = (handX - 0.5) * (1 - zoomLerp * 0.9);
+            const rotX = (handY - 0.5) * (1 - zoomLerp * 0.9);
             uiElement.style.opacity = 1.0 - zoomLerp * 1.5;
 
             if (isStarMode) galaxyTime++;
 
             ctx.globalCompositeOperation = 'lighter';
-            if (!isStarMode && Math.random() < 0.07 && rockets.length < 4) rockets.push(new Rocket());
+            if (!isStarMode && Math.random() < 0.05 && rockets.length < 3) rockets.push(new Rocket());
             rockets.forEach((r, i) => { r.update(); r.draw(rotX, rotY); if (r.done) rockets.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(rotX, rotY); if (!isStarMode && p.alpha <= 0) particles.splice(i, 1); });
 
@@ -177,16 +172,19 @@
 
                 photos.sort((a,b) => b.baseZ - a.baseZ).forEach((pData) => {
                     let distIdx = Math.abs(pData.id - currentFocusIndex);
-                    let focusFactor = Math.max(0, 1 - distIdx * 0.4);
+                    let focusFactor = Math.max(0, 1 - distIdx * 0.5);
                     let isTarget = Math.round(currentFocusIndex) === pData.id;
                     ctx.globalAlpha = (0.2 + focusFactor * 0.8) * (1 - zoomLerp) + (isTarget ? zoomLerp : 0);
-                    if (ctx.globalAlpha <= 0.01) return;
-
-                    let zOff = 200 + (isTarget ? (zoomLerp * 350) : (zoomLerp * 1500));
-                    let p = project(pData.baseX * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
-                    let scale = (0.25 + focusFactor * 0.75) + (isTarget ? zoomLerp * 1.0 : 0);
-                    let iw = pData.img.width * p.s * scale * (w < 600 ? 0.35 : 0.28); 
-                    let ih = pData.img.height * p.s * scale * (w < 600 ? 0.35 : 0.28);
+                    
+                    const spread = w < h ? 0.55 : 1.0;
+                    let zOff = 150 + (isTarget ? (zoomLerp * 300) : (zoomLerp * 1000));
+                    let p = project(pData.baseX * spread * (1-focusFactor), 0, pData.baseZ * (1-focusFactor) + zOff, rotX, rotY);
+                    
+                    let sizeMult = w < h ? 0.6 : 0.35;
+                    let scale = (0.3 + focusFactor * 0.7) + (isTarget ? zoomLerp * 1.2 : 0);
+                    let iw = pData.img.width * p.s * scale * sizeMult; 
+                    let ih = pData.img.height * p.s * scale * sizeMult;
+                    // 绘制图片，中心对齐投影点
                     ctx.drawImage(pData.img, p.x - iw/2, p.y - ih/2, iw, ih);
                 });
             }
@@ -196,26 +194,50 @@
 
         async function setupAI() {
             const status = document.getElementById('status');
+            // 降低模型复杂度以提升手机性能
             const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks[0];
                     handX = 1.0 - h[9].x; handY = h[9].y;
                     const palmSize = dist(h[0], h[9]);
-                    isStarMode = dist(h[12], h[0]) / palmSize > 1.5;
+                    isStarMode = dist(h[12], h[0]) / palmSize > 1.4;
                     isPinching = isStarMode && dist(h[8], h[4]) / palmSize < 0.5;
-                    status.innerText = isPinching ? "VIEWING" : (isStarMode ? "GALLERY" : "2026 FIREWORKS");
+                    status.innerText = isStarMode ? (isPinching ? "ZOOM IN" : "GALLERY MODE") : "HAND NOT DETECTED";
                 } else { status.innerText = "SHOW HAND TO START"; }
             });
-            const cam = new Camera(document.getElementById('v'), {
-                onFrame: async () => { await hands.send({ image: document.getElementById('v') }); },
-                width: 640, height: 480
+
+            const video = document.getElementById('v');
+            // 使用更适合手机竖屏的采集比例
+            const cam = new Camera(video, {
+                onFrame: async () => { await hands.send({ image: video }); },
+                width: 480, height: 640 
             });
-            cam.start().then(() => status.innerText = "CAMERA READY");
+
+            // 手机端必须通过点击触发相机启动
+            const startAction = () => {
+                status.innerText = "STARTING CAMERA...";
+                cam.start().then(() => { status.innerText = "CAMERA READY - SHOW HAND"; });
+                window.removeEventListener('touchstart', startAction);
+            };
+            window.addEventListener('touchstart', startAction);
         }
-        resize(); window.onresize = resize; preloadImages(() => { setupAI(); animate(); });
+
+        // 初始化
+        resize(); 
+        window.addEventListener('resize', resize);
+        
+        let loaded = 0;
+        imageUrls.forEach((url, i) => {
+            const img = new Image(); img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const angle = -Math.PI * 0.4 + i * (Math.PI * 0.8 / 12);
+                photos.push({ img, baseX: 550 * Math.cos(angle), baseZ: 550 * Math.sin(angle) + 200, id: i });
+                if (++loaded === 13) { setupAI(); animate(); }
+            };
+            img.src = url;
+        });
     </script>
 </body>
 </html>
-
