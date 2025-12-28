@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Best Wishes - 交互影像装置</title>
+    <title>2026元旦快乐 - 交互影像装置</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,600&family=Montserrat:wght@300&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
@@ -14,10 +14,18 @@
         }
 
         #main-title {
-            font-family: 'Playfair Display', serif; font-size: 4.5rem; font-style: italic; margin: 0;
+            /* 为了更好地支持中文，这里去掉了强制斜体 font-style: italic; 
+               如果喜欢斜体，可以加回来，但中文字体的斜体效果有时不太自然 */
+            font-family: 'Playfair Display', serif; 
+            font-size: 4.5rem; 
+            margin: 0;
+            /* 豪华金色流光渐变 */
             background: linear-gradient(75deg, #ffd700 0%, #fff 45%, #ffd700 55%, #ffd700 100%);
-            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite; filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
+            background-size: 200% auto; 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite; 
+            filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
         }
 
         @keyframes shine { to { background-position: 200% center; } }
@@ -46,7 +54,7 @@
 <body>
     <div id="reticle"></div>
     <div id="title-container">
-        <h1 id="main-title">Eternal Memories</h1>
+        <h1 id="main-title">2026元旦快乐</h1>
     </div>
     
     <div id="container">
@@ -79,7 +87,6 @@
 
         function init() {
             scene = new THREE.Scene();
-            // 相机位置在 Z=50
             camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
             camera.position.z = 50;
 
@@ -97,6 +104,7 @@
             const loader = new THREE.TextureLoader();
             
             for(let i=1; i<=IMG_COUNT; i++) {
+                // 确保你的 mj 文件夹和这个 html 在同一级目录
                 const texture = loader.load(`./mj/${i}.jpg`, (tex) => {
                     const aspect = tex.image.width / tex.image.height;
                     mesh.geometry = new THREE.PlaneGeometry(7 * aspect, 7);
@@ -107,12 +115,11 @@
                     transparent: true, 
                     opacity: 0,
                     side: THREE.DoubleSide,
-                    // 关键属性初始化
                     depthTest: true
                 });
                 
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6, 9), material);
-                mesh.renderOrder = 0; // 初始化渲染顺序
+                mesh.renderOrder = 0; 
 
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
                 const radius = 18;
@@ -122,7 +129,7 @@
                 imageGroup.add(mesh);
             }
 
-            // 粒子系统
+            // 粒子系统 (蛋糕)
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
@@ -185,37 +192,26 @@
             const isOpened = morphFactor > 0.5;
             document.getElementById('reticle').style.display = (isOpened && !zoomedImage) ? 'block' : 'none';
 
-            // --- 核心修改：图片渲染逻辑 ---
+            // 图片渲染逻辑 (保持最前)
             imageGroup.children.forEach((mesh) => {
                 if (zoomedImage === mesh) {
-                    // 1. 将目标 Z 坐标从 35 改为 40 (相机在50)，使其物理距离更近
                     const targetPos = new THREE.Vector3(0, 0, 40);
                     mesh.position.lerp(targetPos, 0.1);
                     mesh.rotation.set(0, 0, 0);
                     mesh.material.opacity = 1;
-                    
-                    // 2. 【关键修改】强制在最前方渲染
-                    // 关闭深度测试，使其不被其他物体遮挡
                     mesh.material.depthTest = false; 
-                    // 设置极高的渲染顺序，确保最后绘制
                     mesh.renderOrder = 999; 
-
                 } else if (zoomedImage) {
                     mesh.material.opacity = THREE.MathUtils.lerp(mesh.material.opacity, 0, 0.1);
                 } else {
-                    // 3. 【关键修改】恢复正常状态
-                    // 恢复深度测试
                     mesh.material.depthTest = true;
-                    // 恢复默认渲染顺序
                     mesh.renderOrder = 0;
-
                     mesh.material.opacity = THREE.MathUtils.lerp(0, 0.9, (morphFactor - 0.3) * 2);
                     mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.2, 0.01, 1.2));
                     mesh.position.lerp(mesh.userData.originalPos, 0.05);
                     mesh.rotation.copy(mesh.userData.originalRot);
                 }
             });
-            // ---------------------------
 
             if (isOpened && !zoomedImage) {
                 raycaster.setFromCamera(centerScreen, camera);
