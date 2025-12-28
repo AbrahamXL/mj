@@ -2,202 +2,318 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Elegant Focus</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+    <title>Best wishes - 艺术交互装置</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,600&family=Montserrat:wght@300&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; position: fixed; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
-        #ui { 
-            position: absolute; top: 8%; left: 0; width: 100%; z-index: 10; 
-            pointer-events: none; transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1); text-align: center;
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
+        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0a0a1a 0%, #000 100%); }
+        
+        /* --- 艺术文字重新设计 --- */
+        #title-container {
+            position: absolute; top: 15%; width: 100%; text-align: center;
+            pointer-events: none; z-index: 10;
         }
-        .year { font-family: 'Cinzel Decorative', cursive; font-size: 10vw; color: rgba(255,215,0,0.7); margin: 0; }
-        .blessing { font-size: 4vw; color: rgba(255,255,255,0.4); margin-top: 5px; letter-spacing: 2px; }
-        #status { margin-top: 15px; color: #555; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 20px; display: inline-block; }
-        video { display: none; }
-        body.focus-mode #ui { opacity: 0; }
+
+        #main-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 5.5rem;
+            font-style: italic;
+            margin: 0;
+            line-height: 1;
+            /* 豪华金色流光 */
+            background: linear-gradient(75deg, 
+                rgba(255,215,0,1) 0%, 
+                rgba(255,255,255,1) 45%, 
+                rgba(255,215,0,1) 55%, 
+                rgba(255,215,0,1) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite;
+            filter: drop-shadow(0 0 20px rgba(255,215,0,0.35));
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        /* --- 交互说明条 --- */
+        #info-instructions {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); 
+            padding: 10px 40px; border-radius: 50px;
+            border: 1px solid rgba(255,215,0,0.2); backdrop-filter: blur(20px);
+            font-size: 0.85rem; z-index: 10; letter-spacing: 2px;
+        }
+        #video-input { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h1 class="year">2026</h1>
-        <div class="blessing">祝你开心</div>
-        <div id="status">星辰系统准备中...</div>
+    <div id="title-container">
+        <h1 id="main-title">Best wishes</h1>
     </div>
-    <canvas id="c"></canvas>
-    <video id="v" playsinline></video>
+    
+    <div id="container">
+        <div id="info-instructions">正在唤醒冬日魔法...</div>
+        <video id="video-input" playsinline></video>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://unpkg.com/three@0.150.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/@mediapipe/hands/hands.js"></script>
+    <script src="https://unpkg.com/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        const canvas = document.getElementById('c');
-        const ctx = canvas.getContext('2d');
-        const totalPhotos = 10;
-        let w, h, dpr, photos = [], bgStars = [], cakeParticles = [];
-        let isHandVisible = false, isPinching = false, pointerPos = {x: 0, y: 0};
-        let gatherLerp = 1, isolatingLerp = 0, time = 0;
-        let selectedIdx = -1;
+        let scene, camera, renderer, particleSystem, mainGroup, snowSystem;
+        let treePos = [], starPos = [], currentPos = [], snowData = [];
+        let currentColors = [], targetColors = [];
+        let isChangingColor = false, colorStartTime = 0;
+        let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0, windForce = 0, lastColorChange = 0;
 
-        const colors = ['hsla(0,100%,60%,', 'hsla(50,100%,60%,', 'hsla(320,100%,70%,', 'hsla(0,0%,95%,'];
+        const COUNT = 3500; 
+        const SNOW_COUNT = 800;
+        // 定义装饰品的起始索引，用于后续变色逻辑
+        const DECO_START_INDEX = COUNT - 600; 
 
-        function resize() {
-            w = window.innerWidth; h = window.innerHeight;
-            dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-            canvas.width = w * dpr; canvas.height = h * dpr;
-            ctx.scale(dpr, dpr);
-            initParticles();
+        const colorThemes = [
+            [0xffd700, 0xff0000, 0xffffff, 0xff0055], 
+            [0x00f2ff, 0x0066ff, 0xaa00ff, 0xffffff], 
+            [0xff00ff, 0x00ff88, 0xffd700, 0x00ccff], 
+        ];
+        let currentThemeIdx = 0;
+
+        function createStarTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.3, 'rgba(255,230,150,0.9)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
         }
 
-        function initParticles() {
-            bgStars = []; cakeParticles = [];
-            for(let i=0; i<80; i++) bgStars.push({x:(Math.random()-0.5)*w*4, y:(Math.random()-0.5)*h*4, z:Math.random()*2000, size:Math.random()*1.5});
-            const addP = (target, count) => {
-                for(let i=0; i<count; i++){
-                    let pt = target();
-                    cakeParticles.push({
-                        sx: (Math.random()-0.5)*w*3, sy: (Math.random()-0.5)*h*3, sz: Math.random()*1200,
-                        tx: pt.x, ty: pt.y, tz: pt.z,
-                        color: colors[Math.floor(Math.random()*colors.length)], size: 1.5 + Math.random()*2
-                    });
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 45;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            mainGroup = new THREE.Group();
+            scene.add(mainGroup);
+
+            const geo = new THREE.BufferGeometry();
+            const posArr = new Float32Array(COUNT * 3);
+            const colArr = new Float32Array(COUNT * 3);
+
+            // 定义蛋糕的层级参数 (半径, 高度, 基底Y坐标)
+            const tiers = [
+                { r: 12, h: 5.5, y: -10 }, // 底层
+                { r: 8.5, h: 5.5, y: -4.5 }, // 中层
+                { r: 5,  h: 5.5, y: 1.0 }   // 顶层
+            ];
+
+            for(let i=0; i<COUNT; i++) {
+                let vTree = new THREE.Vector3();
+                let pColor = new THREE.Color();
+
+                // --- 构建蛋糕形状 ---
+                if (i < DECO_START_INDEX) {
+                    // === 蛋糕主体 (奶油和糖霜层) ===
+                    let tierIdx = 0;
+                    // 根据索引分配到不同的层
+                    if (i > DECO_START_INDEX * 0.45) tierIdx = 1;
+                    if (i > DECO_START_INDEX * 0.8) tierIdx = 2;
+
+                    const t = tiers[tierIdx];
+                    const angle = Math.random() * Math.PI * 2;
+                    let r, y, colorHex;
+
+                    // 决定是做侧壁还是做顶部糖霜平面
+                    if (Math.random() > 0.3) {
+                        // 侧壁 (蛋糕体) - 稍微加一点随机抖动让它看起来松软
+                        r = t.r * (0.96 + Math.random() * 0.08);
+                        y = t.y + Math.random() * t.h;
+                        // 基础奶油色，带一点点变化
+                        colorHex = (i % 3 === 0) ? 0xFFFDD0 : 0xFFF8E7; 
+                    } else {
+                        // 顶部平面 (白色糖霜层) - 均匀分布在圆盘上
+                        r = Math.sqrt(Math.random()) * t.r * 1.03; // 稍微比侧壁宽一点点
+                        y = t.y + t.h + (Math.random()-0.5)*0.3;
+                        colorHex = 0xFFFFFF; // 纯白糖霜
+                    }
+                    vTree.set(r * Math.cos(angle), y, r * Math.sin(angle));
+                    pColor.setHex(colorHex);
+
+                } else {
+                    // === 装饰品 (位于DECO_START_INDEX之后) ===
+                    // 随机分布在各层的边缘或者最顶层的中心
+                    const tierIdx = Math.floor(Math.random() * tiers.length);
+                    const t = tiers[tierIdx];
+                    const angle = Math.random() * Math.PI * 2;
+                    let r, y;
+
+                    // 如果在最顶层，有概率放在中间做蜡烛/顶部装饰
+                    if (tierIdx === tiers.length - 1 && Math.random() > 0.6) {
+                         r = Math.sqrt(Math.random()) * t.r * 0.6; // 靠近中心
+                         y = t.y + t.h + Math.random() * 3 + 0.5; // 稍微高一点
+                    } else {
+                        // 放在各层的边缘做裱花/糖珠装饰
+                         r = t.r * (1.02 + Math.random()*0.1);
+                         y = t.y + t.h + Math.random()*0.8;
+                    }
+
+                    vTree.set(r * Math.cos(angle), y, r * Math.sin(angle));
+                    // 装饰品使用当前主题颜色
+                    pColor.setHex(colorThemes[0][i % 4]);
                 }
-            };
-            const getCyl = (r, b, t) => { let a=Math.random()*Math.PI*2, h=b+Math.random()*(t-b); return {x:Math.cos(a)*r, y:h, z:Math.sin(a)*r}; };
-            addP(() => getCyl(160, 60, 180), 300);
-            addP(() => getCyl(100, -30, 60), 200);
-            addP(() => getCyl(50, -100, -30), 100);
+
+                // 保持原有的炸开/星空位置逻辑
+                treePos.push(vTree);
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(25 + Math.random() * 30, Math.random() * Math.PI, Math.random() * Math.PI * 2));
+                currentPos.push(vTree.clone());
+                currentColors.push(pColor.clone());
+                targetColors.push(pColor.clone());
+                
+                posArr[i*3] = vTree.x; posArr[i*3+1] = vTree.y; posArr[i*3+2] = vTree.z;
+                colArr[i*3] = pColor.r; colArr[i*3+1] = pColor.g; colArr[i*3+2] = pColor.b;
+            }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
+            particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({
+                size: 0.75, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false
+            }));
+            mainGroup.add(particleSystem);
+
+            // 雪花系统保持不变
+            const snowGeo = new THREE.BufferGeometry();
+            const snowPositions = new Float32Array(SNOW_COUNT * 3);
+            for(let i=0; i<SNOW_COUNT; i++) {
+                snowPositions[i*3] = (Math.random()-0.5)*100;
+                snowPositions[i*3+1] = Math.random()*60 - 30;
+                snowPositions[i*3+2] = (Math.random()-0.5)*100;
+                snowData.push({ velY: -0.05 - Math.random()*0.1, velX: (Math.random()-0.5)*0.05 });
+            }
+            snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+            snowSystem = new THREE.Points(snowGeo, new THREE.PointsMaterial({
+                size: 0.4, color: 0xffffff, transparent: true, opacity: 0.5, map: createStarTexture(), blending: THREE.AdditiveBlending, depthWrite: false
+            }));
+            scene.add(snowSystem);
+
+            animate();
         }
 
-        function project(x, y, z) {
-            const fov = 650; const s = fov / (fov + z);
-            return { x: x * s + w/2, y: y * s + h/2, scale: s };
+        function handleThemeChange() {
+            currentThemeIdx = (currentThemeIdx + 1) % colorThemes.length;
+            const newTheme = colorThemes[currentThemeIdx];
+            colorStartTime = Date.now();
+            isChangingColor = true;
+            
+            // 修改变色逻辑：只改变蛋糕上的装饰品部分
+            for(let i=0; i<COUNT; i++) {
+                if (i >= DECO_START_INDEX) {
+                    targetColors[i].setHex(newTheme[i % newTheme.length]);
+                }
+            }
+            lastColorChange = Date.now();
         }
 
         function animate() {
-            time += 0.012;
-            ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
-
-            let targetGather = isHandVisible ? 0 : 1;
-            gatherLerp += (targetGather - gatherLerp) * 0.08;
-            let targetIso = (isPinching && selectedIdx !== -1 && isHandVisible) ? 1 : 0;
-            isolatingLerp += (targetIso - isolatingLerp) * 0.12;
-
-            if(isolatingLerp > 0.1) document.body.classList.add('focus-mode');
-            else document.body.classList.remove('focus-mode');
-
-            ctx.globalCompositeOperation = 'lighter';
-            let rot = time * 0.4;
-            let bgDim = 1 - isolatingLerp * 0.85; // 背景变暗程度稍微减弱一点
-
-            [...bgStars, ...cakeParticles].forEach(p => {
-                let x, y, z;
-                if(p.tx !== undefined) {
-                    let tx = p.tx*Math.cos(rot) - p.tz*Math.sin(rot);
-                    let tz = p.tx*Math.sin(rot) + p.tz*Math.cos(rot);
-                    x = p.sx + (tx - p.sx) * gatherLerp; y = p.sy + (p.ty - p.sy) * gatherLerp; z = p.sz + (tz - p.sz) * gatherLerp;
-                } else { x=p.x; y=p.y; z=p.z-1; if(z<0)z+=2000; p.z=z; }
-                let proj = project(x, y, z);
-                let alpha = (p.color ? (0.3 + gatherLerp*0.6) : 0.4) * bgDim;
-                ctx.fillStyle = (p.color || 'rgba(255,255,255,') + alpha + ')';
-                ctx.beginPath(); ctx.arc(proj.x, proj.y, p.size*proj.scale, 0, Math.PI*2); ctx.fill();
-            });
-
-            ctx.globalCompositeOperation = 'source-over';
-            if (photos.length > 0) {
-                let baseVis = Math.max(0, 1 - gatherLerp * 1.5);
-                let newSelected = -1;
-                let minDist = 60; 
-
-                photos.forEach((pData, i) => {
-                    let isThisSelected = (selectedIdx === i);
-                    let isoVis = isThisSelected ? 1 : (1 - isolatingLerp * 2);
-                    let finalAlpha = baseVis * Math.max(0, isoVis);
-
-                    if (finalAlpha > 0.01) {
-                        let px = pData.seedX + Math.sin(time + i) * 20;
-                        let py = pData.seedY + Math.cos(time + i) * 20;
-                        let pProj = project(px, py, pData.seedZ);
-
-                        if (baseVis > 0.5 && isHandVisible && isolatingLerp < 0.1) {
-                            let d = Math.hypot(pProj.x - pointerPos.x, pProj.y - pointerPos.y);
-                            if (d < minDist) { minDist = d; newSelected = i; }
-                        }
-
-                        pData.selectLerp += (isThisSelected ? 1 : 0 - pData.selectLerp) * 0.15;
-                        
-                        ctx.save();
-                        ctx.globalAlpha = finalAlpha;
-
-                        // 位置计算：飞向屏幕中心
-                        let curX = pProj.x + (w/2 - pProj.x) * (isThisSelected ? isolatingLerp : 0);
-                        let curY = pProj.y + (h/2 - pProj.y) * (isThisSelected ? isolatingLerp : 0);
-                        ctx.translate(curX, curY);
-
-                        // 【关键修改】缩放计算：适度放大
-                        // 散开状态的基础倍率 (未选中很小，选中稍大)
-                        let baseMultiplier = 0.12 + pData.selectLerp * 0.1; 
-                        // 聚焦状态的目标倍率 (固定为 0.45，大约是选中状态的2倍)
-                        let targetMultiplier = 0.45; 
-                        // 插值计算当前倍率
-                        let currentMultiplier = baseMultiplier + (targetMultiplier - baseMultiplier) * (isThisSelected ? isolatingLerp : 0);
-                        let finalScale = pProj.scale * currentMultiplier;
-
-                        ctx.drawImage(pData.img, -pData.img.width*finalScale/2, -pData.img.height*finalScale/2, pData.img.width*finalScale, pData.img.height*finalScale);
-                        
-                        if (isThisSelected && isolatingLerp > 0.05) {
-                            ctx.strokeStyle = `rgba(255, 215, 0, ${isolatingLerp})`;
-                            // 边框稍微细一点，配合精致感
-                            ctx.lineWidth = 1 + isolatingLerp * 2;
-                            ctx.strokeRect(-pData.img.width*finalScale/2, -pData.img.height*finalScale/2, pData.img.width*finalScale, pData.img.height*finalScale);
-                        }
-                        ctx.restore();
-                    }
-                });
-                if (!isPinching) selectedIdx = newSelected;
-            }
-
-            if (isHandVisible && gatherLerp < 0.5 && isolatingLerp < 0.2) {
-                ctx.fillStyle = 'rgba(255,255,255,0.7)';
-                ctx.beginPath(); ctx.arc(pointerPos.x, pointerPos.y, 4, 0, Math.PI*2); ctx.fill();
-            }
-
             requestAnimationFrame(animate);
+            const now = Date.now();
+            
+            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.08); 
+            mainGroup.rotation.y += 0.003;
+            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY, 0.05);
+            mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.05);
+
+            // 增强版文字视差
+            const title = document.getElementById('title-container');
+            title.style.transform = `translate(${targetRotY * 12}px, ${-targetRotX * 6}px)`;
+
+            const posAttr = particleSystem.geometry.attributes.position;
+            const colAttr = particleSystem.geometry.attributes.color;
+            let cAlpha = Math.min((now - colorStartTime) / 1200, 1.0);
+
+            for(let i=0; i<COUNT; i++) {
+                currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
+                posAttr.array[i*3] = currentPos[i].x;
+                // 蛋糕不需要像树一样有那种特定的呼吸摆动，稍微减弱一点
+                posAttr.array[i*3+1] = currentPos[i].y + (i >= DECO_START_INDEX ? Math.sin(now*0.002+i)*0.05 : 0);
+                posAttr.array[i*3+2] = currentPos[i].z;
+
+                if (isChangingColor) {
+                    const c = currentColors[i].clone().lerp(targetColors[i], cAlpha);
+                    colAttr.array[i*3] = c.r; colAttr.array[i*3+1] = c.g; colAttr.array[i*3+2] = c.b;
+                    if (cAlpha >= 1 && i === COUNT-1) isChangingColor = false;
+                }
+            }
+            
+            const sPos = snowSystem.geometry.attributes.position;
+            windForce = THREE.MathUtils.lerp(windForce, targetRotY * 0.03, 0.05);
+            for(let i=0; i<SNOW_COUNT; i++) {
+                sPos.array[i*3+1] -= 0.08;
+                sPos.array[i*3] += windForce;
+                if(sPos.array[i*3+1] < -30) sPos.array[i*3+1] = 30;
+                if(sPos.array[i*3] > 50) sPos.array[i*3] = -50;
+                if(sPos.array[i*3] < -50) sPos.array[i*3] = 50;
+            }
+
+            posAttr.needsUpdate = true; colAttr.needsUpdate = true; sPos.needsUpdate = true;
+            renderer.render(scene, camera);
         }
 
-        async function initAI() {
-            const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-            hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
+        async function startAI() {
+            const info = document.getElementById('info-instructions');
+            const hands = new Hands({ locateFile: (file) => `https://unpkg.com/@mediapipe/hands/${file}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.75 });
+            
             hands.onResults(res => {
-                if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
-                    isHandVisible = true;
-                    const lm = res.multiHandLandmarks[0];
-                    pointerPos.x = (1 - lm[8].x) * w; pointerPos.y = lm[8].y * h;
-                    isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.07;
-                } else { isHandVisible = false; isPinching = false; }
+                if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                    const h = res.multiHandLandmarks[0];
+                    const wrist = h[0];
+                    const fingers = [8, 12, 16, 20];
+                    let extendedFingers = 0;
+
+                    fingers.forEach(tipIdx => {
+                        const distTip = Math.hypot(h[tipIdx].x - wrist.x, h[tipIdx].y - wrist.y);
+                        const distMcp = Math.hypot(h[tipIdx-3].x - wrist.x, h[tipIdx-3].y - wrist.y);
+                        if (distTip > distMcp * 1.2) extendedFingers++;
+                    });
+
+                    targetMorph = extendedFingers / 4; 
+
+                    const distPinch = Math.hypot(h[4].x - h[8].x, h[4].y - h[8].y);
+                    const palmSize = Math.hypot(h[0].x - h[5].x, h[0].y - h[5].y);
+                    if (distPinch / palmSize < 0.4 && (Date.now() - lastColorChange > 2000)) handleThemeChange();
+
+                    targetRotY = (0.5 - h[9].x) * 12; 
+                    targetRotX = (h[9].y - 0.5) * 6;
+                    
+                    info.innerHTML = `🖐️ 张合控制爆发 (${extendedFingers}) | 👌 捏合变换色彩`;
+                } else {
+                    info.innerText = "✨ 请展示您的手掌开启魔法互动";
+                }
             });
-            const cam = new Camera(document.getElementById('v'), { 
-                onFrame: async () => { await hands.send({image: document.getElementById('v')}); }, 
-                width: 320, height: 240 
+
+            const cam = new Camera(document.getElementById('video-input'), {
+                onFrame: async () => { await hands.send({ image: document.getElementById('video-input') }); },
+                width: 640, height: 480
             });
             cam.start();
-            document.getElementById('status').innerText = "🖐️ 挥手开启，捏合聚焦";
         }
 
-        resize();
-        window.addEventListener('resize', resize);
-        let loaded = 0;
-        for(let i=1; i<=totalPhotos; i++) {
-            const img = new Image(); img.crossOrigin = "anonymous"; img.src = `mj/${i}.jpg`;
-            img.onload = () => {
-                photos.push({ 
-                    img, selectLerp: 0,
-                    seedX: (Math.random()-0.5)*w*2.5, seedY: (Math.random()-0.5)*h*2.5, seedZ: 100 + Math.random()*800 
-                });
-                if(++loaded === totalPhotos) { initAI(); animate(); }
-            };
-        }
+        window.onload = () => { init(); startAI(); };
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
