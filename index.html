@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>2026元旦快乐 - 交互影像装置</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,600&family=Montserrat:wght@300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,800&family=Montserrat:wght@300&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
         #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0a0a1a 0%, #000 100%); }
@@ -13,22 +13,48 @@
             pointer-events: none; z-index: 10;
         }
 
+        /* --- 核心修改：艺术感字体设计 --- */
         #main-title {
-            /* 为了更好地支持中文，这里去掉了强制斜体 font-style: italic; 
-               如果喜欢斜体，可以加回来，但中文字体的斜体效果有时不太自然 */
-            font-family: 'Playfair Display', serif; 
-            font-size: 4.5rem; 
+            /* 1. 字体栈：优先使用更有艺术感的衬线体/宋体，回退到系统宋体 */
+            font-family: 'Playfair Display', 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+            font-size: 5rem; 
+            font-weight: 800; /* 特粗字重增强质感 */
+            letter-spacing: 0.12em; /* 增加字间距营造宏大感 */
             margin: 0;
-            /* 豪华金色流光渐变 */
-            background: linear-gradient(75deg, #ffd700 0%, #fff 45%, #ffd700 55%, #ffd700 100%);
-            background-size: 200% auto; 
-            -webkit-background-clip: text; 
+            line-height: 1.2;
+
+            /* 2. 材质：复杂的液态流光金纹理 */
+            background: linear-gradient(
+                110deg,
+                #9E7E38 10%,   /* 深沉暗金 */
+                #F3E2A9 30%,   /* 柔和亮金 */
+                #FFFFFF 50%,   /* 纯白核心高光 */
+                #F3E2A9 70%,   /* 柔和亮金 */
+                #9E7E38 90%    /* 深沉暗金 */
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite; 
-            filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
+
+            /* 3. 描边：增加精致的金属边缘光 */
+            -webkit-text-stroke: 1px rgba(255, 245, 220, 0.3);
+
+            /* 4. 光晕：多重光影叠加，营造奢华氛围 */
+            filter: 
+                drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) /* 内层高亮光晕 */
+                drop-shadow(0 0 60px rgba(255, 180, 50, 0.4)); /* 外层柔和漫射光 */
+
+            /* 动画：使用新的平滑扫光动画 */
+            animation: textShine 5s linear infinite; 
         }
 
-        @keyframes shine { to { background-position: 200% center; } }
+        /* 新的扫光动画关键帧 */
+        @keyframes textShine {
+            0% { background-position: 0% center; }
+            100% { background-position: -200% center; }
+        }
+        /* --------------------------------- */
+
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
