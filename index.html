@@ -3,35 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Live Gallery</title>
+    <title>2026 Fast Gallery</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; position: fixed; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
-        
-        /* UI 绝对定位在左上角 */
-        #ui { 
-            position: absolute; top: 30px; left: 20px; 
-            z-index: 10; pointer-events: none;
-            font-family: sans-serif;
-        }
-        .year { 
-            font-size: 14vw; font-weight: 900; color: rgba(255,215,0,0.3);
-            margin: 0; line-height: 1;
-        }
-        #status {
-            margin-top: 10px; color: #fff; font-size: 12px;
-            background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;
-            display: inline-block; letter-spacing: 1px;
-        }
+        #ui { position: absolute; top: 30px; left: 20px; z-index: 10; pointer-events: none; font-family: sans-serif; }
+        .year { font-size: 14vw; font-weight: 900; color: rgba(255,215,0,0.3); margin: 0; line-height: 1; }
+        #status { margin-top: 10px; color: #fff; font-size: 11px; padding: 4px 8px; background: rgba(255,255,255,0.1); display: inline-block; }
         video { display: none; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h1 class="year">2026</h1>
-        <div id="status">点击屏幕开始交互</div>
-    </div>
+    <div id="ui"><h1 class="year">2026</h1><div id="status">TAP TO START</div></div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -41,144 +25,120 @@
     <script>
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
-        const statusEl = document.getElementById('status');
-        let w, h, dpr, photos = [], particles = [];
-        let handX = 0, handY = 0, isHandVisible = false, isPinching = false;
-        let globalTime = 0;
+        let w, h, dpr, photos = [];
+        let handX = 0, isHandVisible = false, isPinching = false;
+        let zoomLerp = 0, currentIdx = 0; 
 
         function resize() {
             w = window.innerWidth; h = window.innerHeight;
-            dpr = window.devicePixelRatio || 1;
+            dpr = Math.min(window.devicePixelRatio || 1, 2); // 限制分辨率最高为2，提升渲染效率
             canvas.width = w * dpr; canvas.height = h * dpr;
             ctx.scale(dpr, dpr);
         }
 
-        // 简单的背景粒子（流星效果），确保画面不“死”
-        class Star {
-            constructor() { this.reset(); }
-            reset() {
-                this.x = Math.random() * w; this.y = Math.random() * h;
-                this.v = 0.5 + Math.random() * 1.5; this.len = 10 + Math.random() * 20;
-            }
-            update() {
-                this.x -= this.v; this.y += this.v * 0.5;
-                if (this.x < -20 || this.y > h + 20) this.reset();
-            }
-            draw() {
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                ctx.beginPath(); ctx.moveTo(this.x, this.y);
-                ctx.lineTo(this.x + this.len, this.y - this.len * 0.5);
-                ctx.stroke();
-            }
-        }
-
         function animate() {
-            globalTime++;
-            ctx.fillStyle = '#05050a';
+            // 背景涂黑，不使用透明度刷新以提升性能
+            ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, w, h);
 
-            // 1. 绘制背景动态流星
-            particles.forEach(p => { p.update(); p.draw(); });
-
-            // 2. 绘制照片墙（左上角对齐）
             if (photos.length > 0) {
-                // 如果没有手，照片会随时间微弱漂浮
-                let activeIdx = isHandVisible ? handX * photos.length : -1;
+                // 1. 大幅提升切换速度系数 (0.1 -> 0.35)
+                let targetIdx = isHandVisible ? handX * (photos.length - 1) : currentIdx;
+                currentIdx += (targetIdx - currentIdx) * 0.35; 
                 
+                // 2. 提升缩放响应速度 (0.1 -> 0.4)
+                let targetZoom = isPinching ? 1 : 0;
+                zoomLerp += (targetZoom - zoomLerp) * 0.4;
+
                 photos.forEach((pData, i) => {
-                    let diff = Math.abs(i - activeIdx);
-                    let focus = isHandVisible ? Math.max(0, 1 - diff * 0.8) : 0;
+                    let diff = Math.abs(i - currentIdx);
+                    // 缩小感应范围，让切换更“清爽”
+                    let focus = Math.max(0, 1 - diff * 1.2); 
                     
-                    // 基础位置：左上角堆叠
-                    let baseX = 40 + i * 15;
-                    let baseY = 150 + i * 10;
+                    ctx.save();
+                    // 基础堆叠位置
+                    let bx = 30 + i * 12;
+                    let by = 160 + i * 8;
                     
-                    // 动态偏移：如果没有手，就随时间摆动；有手就跟手
-                    let offsetX = Math.sin(globalTime * 0.02 + i) * 10;
-                    let offsetY = Math.cos(globalTime * 0.02 + i) * 10;
-                    
-                    if (isHandVisible) {
-                        offsetX += focus * 50; 
-                        offsetY += focus * 20;
+                    // 跟随偏移
+                    if (focus > 0) {
+                        bx += focus * 40;
+                        by += focus * 15;
                     }
 
-                    ctx.save();
-                    ctx.translate(baseX + offsetX, baseY + offsetY);
+                    ctx.translate(bx, by);
                     
-                    // 缩放逻辑
-                    let scale = (w < 600 ? 0.25 : 0.4) + (focus * 0.3);
-                    if (isPinching && focus > 0.8) scale *= 1.8; // 捏合放大
+                    // 缩放计算
+                    let baseScale = (w < 600 ? 0.22 : 0.4);
+                    let s = baseScale + (focus * 0.3) + (focus * zoomLerp * 0.6);
+                    
+                    ctx.globalAlpha = isHandVisible ? (0.2 + focus * 0.8) : 0.3;
+                    
+                    // 绘制（去掉了所有阴影特效以保证帧率）
+                    let iw = pData.img.width * s;
+                    let ih = pData.img.height * s;
+                    ctx.drawImage(pData.img, 0, 0, iw, ih);
 
-                    ctx.globalAlpha = isHandVisible ? (0.3 + focus * 0.7) : 0.4;
-                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                    ctx.shadowBlur = 10;
-                    
-                    let imgW = pData.img.width * scale;
-                    let imgH = pData.img.height * scale;
-                    
-                    // 绘制照片
-                    ctx.drawImage(pData.img, 0, 0, imgW, imgH);
-                    
-                    // 给选中的照片加个边框
-                    if (focus > 0.5) {
-                        ctx.strokeStyle = `rgba(255,215,0,${focus})`;
+                    // 选中状态的极简边框
+                    if (focus > 0.8) {
+                        ctx.strokeStyle = '#ffd700';
                         ctx.lineWidth = 2;
-                        ctx.strokeRect(0, 0, imgW, imgH);
+                        ctx.strokeRect(0, 0, iw, ih);
                     }
                     ctx.restore();
                 });
             }
-
             requestAnimationFrame(animate);
         }
 
-        async function initAI() {
+        async function init() {
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-            hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5});
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 0, // 最快速度
+                minDetectionConfidence: 0.4,
+                minTrackingConfidence: 0.4
+            });
+            
             hands.onResults(res => {
                 if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
+                    // 左右镜像调整
                     handX = 1 - lm[9].x; 
-                    handY = lm[9].y;
                     
-                    // 判定张开与捏合
-                    const openLevel = Math.hypot(lm[12].x-lm[0].x, lm[12].y-lm[0].y);
-                    const pinchDist = Math.hypot(lm[8].x-lm[4].x, lm[8].y-lm[4].y);
-                    isPinching = pinchDist < 0.05;
+                    // 灵敏的捏合判定
+                    const pinch = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+                    isPinching = pinch < 0.06;
                     
-                    statusEl.innerText = isPinching ? "🔍 正在放大查看" : "👋 已识别：左右移动切换";
-                    statusEl.style.background = "rgba(0,255,0,0.2)";
+                    document.getElementById('status').innerText = isPinching ? "ZOOM ACTIVE" : "HAND DETECTED";
                 } else {
                     isHandVisible = false;
-                    statusEl.innerText = "⏳ 寻找手掌中...";
-                    statusEl.style.background = "rgba(255,255,255,0.1)";
+                    document.getElementById('status').innerText = "SEARCHING HAND...";
                 }
             });
 
-            const cam = new Camera(document.getElementById('v'), {
-                onFrame: async () => { await hands.send({image: document.getElementById('v')}); },
-                width: 480, height: 640
+            const video = document.getElementById('v');
+            const cam = new Camera(video, {
+                onFrame: async () => { await hands.send({image: video}); },
+                width: 320, height: 240 // 降低输入分辨率以提升AI计算速度
             });
 
             window.addEventListener('touchstart', () => {
-                statusEl.innerText = "📷 相机启动中...";
                 cam.start();
+                document.getElementById('status').innerText = "CAMERA ON";
             }, {once: true});
         }
 
-        // 启动
         resize();
         window.addEventListener('resize', resize);
-        for(let i=0; i<20; i++) particles.push(new Star());
         
-        // 加载图片
         let loaded = 0;
         for(let i=1; i<=13; i++) {
             const img = new Image();
             img.crossOrigin = "anonymous";
             img.src = `mj/${i}.jpg`;
-            img.onload = () => { if(++loaded === 13) { initAI(); animate(); } };
+            img.onload = () => { if(++loaded === 13) { init(); animate(); } };
         }
     </script>
 </body>
