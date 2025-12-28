@@ -3,21 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Immersive Gallery</title>
+    <title>2026 NYE Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400&family=Syncopate:wght@700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; position: fixed; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
-        #ui { position: absolute; top: 30px; left: 20px; z-index: 10; pointer-events: none; font-family: sans-serif; transition: opacity 0.3s;}
-        .year { font-size: 14vw; font-weight: 900; color: rgba(255,215,0,0.3); margin: 0; line-height: 1; }
-        #status { margin-top: 10px; color: #fff; font-size: 11px; padding: 4px 8px; background: rgba(255,255,255,0.1); display: inline-block; }
+        
+        /* UI 样式优化 */
+        #ui { 
+            position: absolute; top: 30px; left: 20px; z-index: 10; 
+            pointer-events: none; text-align: left;
+            transition: opacity 0.5s ease;
+        }
+        .year { 
+            font-family: 'Syncopate', sans-serif;
+            font-size: 14vw; font-weight: 700; 
+            color: rgba(255,215,0,0.2); 
+            margin: 0; line-height: 0.8;
+            text-shadow: 0 0 20px rgba(255,215,0,0.1);
+        }
+        .subtitle {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 5vw; color: rgba(255, 255, 255, 0.5);
+            margin-top: 5px; letter-spacing: 1px;
+        }
+        #status { 
+            margin-top: 15px; color: #fff; font-size: 11px; 
+            padding: 6px 10px; background: rgba(255,255,255,0.15); 
+            display: inline-block; border-radius: 4px;
+            font-family: sans-serif;
+        }
         video { display: none; }
         /* 放大时隐藏UI */
         body.zooming #ui { opacity: 0; }
     </style>
 </head>
 <body>
-    <div id="ui"><h1 class="year">2026</h1><div id="status">TAP TO START</div></div>
+    <div id="ui">
+        <h1 class="year">2026</h1>
+        <div class="subtitle">Happy New Year</div>
+        <div id="status">点击屏幕开启庆典</div>
+    </div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
 
@@ -27,8 +55,8 @@
     <script>
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
-        const ui = document.getElementById('ui');
-        let w, h, dpr, photos = [];
+        const totalPhotos = 10;
+        let w, h, dpr, photos = [], particles = [], rockets = [];
         let handX = 0, isHandVisible = false, isPinching = false;
         let zoomLerp = 0, currentIdx = 0; 
 
@@ -39,73 +67,107 @@
             ctx.scale(dpr, dpr);
         }
 
+        // --- 烟花粒子系统 ---
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x; this.y = y; this.hue = hue;
+                this.alpha = 1; this.decay = 0.015 + Math.random() * 0.03;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 7;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.gravity = 0.2;
+            }
+            update() {
+                this.vx *= 0.96; this.vy *= 0.96; this.vy += this.gravity;
+                this.x += this.vx; this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        class Rocket {
+            constructor() {
+                this.x = Math.random() * w; this.y = h;
+                this.targetY = h * 0.15 + Math.random() * h * 0.3;
+                this.hue = Math.random() * 360; this.speed = 18 + Math.random() * 5;
+            }
+            update() {
+                this.y -= this.speed;
+                if (this.y <= this.targetY) { this.explode(); return true; }
+            }
+            draw() {
+                ctx.fillStyle = `hsl(${this.hue}, 100%, 70%)`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+            explode() {
+                for(let i=0; i<100; i++) particles.push(new Particle(this.x, this.y, this.hue));
+            }
+        }
+
         function animate() {
-            ctx.fillStyle = '#000';
+            // 使用半透明清屏，制造烟花拖尾效果
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(0, 0, 15, 0.2)';
             ctx.fillRect(0, 0, w, h);
 
+            // --- 绘制烟花 ---
+            ctx.globalCompositeOperation = 'lighter';
+            // 如果正在放大查看照片，减少烟花发射频率，避免干扰
+            let launchChance = zoomLerp > 0.2 ? 0.01 : 0.04;
+            if (Math.random() < launchChance) rockets.push(new Rocket());
+            
+            rockets = rockets.filter(r => { r.draw(); return !r.update(); });
+            particles = particles.filter(p => { p.update(); p.draw(); return p.alpha > 0; });
+
+            // --- 绘制照片墙 ---
+            ctx.globalCompositeOperation = 'source-over';
             if (photos.length > 0) {
-                // 极速响应的平滑系数
                 let targetIdx = isHandVisible ? handX * (photos.length - 1) : currentIdx;
                 currentIdx += (targetIdx - currentIdx) * 0.35; 
-                
                 let targetZoom = isPinching ? 1 : 0;
                 zoomLerp += (targetZoom - zoomLerp) * 0.3;
 
-                // 控制UI显示：放大时隐藏UI
                 if (zoomLerp > 0.1) document.body.classList.add('zooming');
                 else document.body.classList.remove('zooming');
 
                 photos.forEach((pData, i) => {
                     let diff = Math.abs(i - currentIdx);
-                    // 聚焦范围更窄，隔离感更强
                     let focus = Math.max(0, 1 - diff * 1.5); 
                     
                     ctx.save();
-
-                    // --- 核心修改1：隔离逻辑 ---
-                    // 计算基础透明度
                     let baseAlpha = isHandVisible ? (0.15 + focus * 0.85) : 0.3;
-                    // 关键：如果不是当前聚焦的照片(focus < 0.8)，随着放大动作(zoomLerp变大)，透明度迅速降为0
-                    if (focus < 0.8) {
-                        baseAlpha *= (1 - zoomLerp * 1.2);
-                    }
+                    if (focus < 0.8) baseAlpha *= (1 - zoomLerp * 1.5);
                     ctx.globalAlpha = Math.max(0, baseAlpha);
                     
-                    // 如果透明度几乎为0，直接跳过绘制，节省性能
-                    if (ctx.globalAlpha < 0.01) {
-                        ctx.restore();
-                        return;
-                    }
+                    if (ctx.globalAlpha < 0.01) { ctx.restore(); return; }
 
-                    // 基础位置
-                    let bx = 30 + i * 10;
-                    let by = 180 + i * 5;
+                    // 基础位置略微下移，为文字留空间
+                    let bx = 30 + i * 15;
+                    let by = 220 + i * 8; 
                     
-                    // 选中时的位移，放大时位移更大，移到屏幕中心
                     if (focus > 0) {
                         bx += focus * 40 * (1 - zoomLerp) + (focus * zoomLerp * w * 0.2);
                         by += focus * 15 * (1 - zoomLerp) + (focus * zoomLerp * h * 0.1);
                     }
                     ctx.translate(bx, by);
                     
-                    // --- 核心修改2：巨幅放大 ---
-                    let baseScale = (w < 600 ? 0.2 : 0.35);
-                    // 关键：将放大倍数系数从之前的 0.6 提升到 3.5，实现巨幅放大
-                    let s = baseScale + (focus * 0.2) + (focus * zoomLerp * 3.5);
-                    
+                    let baseScale = (w < 600 ? 0.22 : 0.4);
+                    let s = baseScale + (focus * 0.2) + (focus * zoomLerp * 3.8);
                     let iw = pData.img.width * s;
                     let ih = pData.img.height * s;
 
-                    // 绘制照片
                     ctx.drawImage(pData.img, 0, 0, iw, ih);
                     
-                    // 放大时加一个聚焦边框
                     if (zoomLerp > 0.1 && focus > 0.9) {
                         ctx.strokeStyle = `rgba(255, 215, 0, ${zoomLerp})`;
-                        ctx.lineWidth = 3 / s; // 保持边框视觉宽度一致
-                        ctx.strokeRect(0, 0, pData.img.width, pData.img.height);
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(0, 0, iw, ih);
                     }
-
                     ctx.restore();
                 });
             }
@@ -123,24 +185,24 @@
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
                     handX = 1 - lm[9].x; 
-                    // 更灵敏的捏合判定
                     isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.05;
-                    document.getElementById('status').innerText = isPinching ? "✅ 已放大聚焦" : "👋 已识别手掌";
+                    document.getElementById('status').innerText = isPinching ? "✨ 沉浸时刻 ✨" : "👋 已连接手势";
                 } else {
                     isHandVisible = false;
-                    document.getElementById('status').innerText = "🔍 寻找手掌中...";
+                    document.getElementById('status').innerText = "👀 寻找手掌中...";
                 }
             });
 
-            const video = document.getElementById('v');
-            const cam = new Camera(video, {
-                onFrame: async () => { await hands.send({image: video}); },
+            const cam = new Camera(document.getElementById('v'), {
+                onFrame: async () => { await hands.send({image: document.getElementById('v')}); },
                 width: 320, height: 240
             });
 
             window.addEventListener('touchstart', () => {
                 cam.start();
-                document.getElementById('status').innerText = "📷 相机启动中";
+                document.getElementById('status').innerText = "🚀 庆典启动中...";
+                // 点击屏幕时立刻发射一枚烟花助兴
+                rockets.push(new Rocket());
             }, {once: true});
         }
 
@@ -148,11 +210,9 @@
         window.addEventListener('resize', resize);
         
         let loaded = 0;
-        for(let i=1; i<=13; i++) {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.src = `mj/${i}.jpg`;
-            img.onload = () => { if(++loaded === 13) { init(); animate(); } };
+        for(let i=1; i <= totalPhotos; i++) {
+            const img = new Image(); img.crossOrigin = "anonymous"; img.src = `mj/${i}.jpg`;
+            img.onload = () => { if(++loaded === totalPhotos) { init(); animate(); } };
         }
     </script>
 </body>
