@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 Starry Discovery</title>
+    <title>2026 Starry Focus</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -11,12 +11,13 @@
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
         #ui { 
             position: absolute; top: 8%; left: 0; width: 100%; z-index: 10; 
-            pointer-events: none; transition: opacity 0.5s ease; text-align: center;
+            pointer-events: none; transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1); text-align: center;
         }
-        .year { font-family: 'Cinzel Decorative', cursive; font-size: 10vw; color: rgba(255,215,0,0.6); margin: 0; }
-        .blessing { font-size: 4.5vw; color: rgba(255,255,255,0.5); margin-top: 5px; letter-spacing: 2px; }
-        #status { margin-top: 15px; color: #666; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 20px; display: inline-block; }
+        .year { font-family: 'Cinzel Decorative', cursive; font-size: 10vw; color: rgba(255,215,0,0.7); margin: 0; }
+        .blessing { font-size: 4vw; color: rgba(255,255,255,0.4); margin-top: 5px; letter-spacing: 2px; }
+        #status { margin-top: 15px; color: #555; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 20px; display: inline-block; }
         video { display: none; }
+        /* 聚焦模式下 UI 彻底消失 */
         body.focus-mode #ui { opacity: 0; }
     </style>
 </head>
@@ -24,7 +25,7 @@
     <div id="ui">
         <h1 class="year">2026</h1>
         <div class="blessing">祝你开心</div>
-        <div id="status">正在初始化星辰...</div>
+        <div id="status">星辰系统准备中...</div>
     </div>
     <canvas id="c"></canvas>
     <video id="v" playsinline></video>
@@ -53,21 +54,19 @@
 
         function initParticles() {
             bgStars = []; cakeParticles = [];
-            for(let i=0; i<100; i++) bgStars.push({x:(Math.random()-0.5)*w*4, y:(Math.random()-0.5)*h*4, z:Math.random()*2000, size:Math.random()*1.5});
-            
+            for(let i=0; i<80; i++) bgStars.push({x:(Math.random()-0.5)*w*4, y:(Math.random()-0.5)*h*4, z:Math.random()*2000, size:Math.random()*1.5});
             const addP = (target, count) => {
                 for(let i=0; i<count; i++){
                     let pt = target();
                     cakeParticles.push({
                         sx: (Math.random()-0.5)*w*3, sy: (Math.random()-0.5)*h*3, sz: Math.random()*1200,
                         tx: pt.x, ty: pt.y, tz: pt.z,
-                        color: colors[Math.floor(Math.random()*colors.length)],
-                        size: 1.5 + Math.random()*2
+                        color: colors[Math.floor(Math.random()*colors.length)], size: 1.5 + Math.random()*2
                     });
                 }
             };
             const getCyl = (r, b, t) => { let a=Math.random()*Math.PI*2, h=b+Math.random()*(t-b); return {x:Math.cos(a)*r, y:h, z:Math.sin(a)*r}; };
-            addP(() => getCyl(160, 60, 180), 350);
+            addP(() => getCyl(160, 60, 180), 300);
             addP(() => getCyl(100, -30, 60), 200);
             addP(() => getCyl(50, -100, -30), 100);
         }
@@ -81,81 +80,81 @@
             time += 0.012;
             ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
 
+            // 状态控制：有手即散开
             let targetGather = isHandVisible ? 0 : 1;
             gatherLerp += (targetGather - gatherLerp) * 0.08;
             
+            // 聚焦控制：捏合且有选中则聚焦
             let targetIso = (isPinching && selectedIdx !== -1 && isHandVisible) ? 1 : 0;
             isolatingLerp += (targetIso - isolatingLerp) * 0.12;
 
             if(isolatingLerp > 0.1) document.body.classList.add('focus-mode');
             else document.body.classList.remove('focus-mode');
 
-            // 1. 粒子系统
+            // 1. 绘制星辰粒子
             ctx.globalCompositeOperation = 'lighter';
             let rot = time * 0.4;
-            let bgAlpha = 1 - isolatingLerp * 0.9;
+            let bgDim = 1 - isolatingLerp * 0.92; // 聚焦时背景变暗
 
             [...bgStars, ...cakeParticles].forEach(p => {
                 let x, y, z;
                 if(p.tx !== undefined) {
                     let tx = p.tx*Math.cos(rot) - p.tz*Math.sin(rot);
                     let tz = p.tx*Math.sin(rot) + p.tz*Math.cos(rot);
-                    x = p.sx + (tx - p.sx) * gatherLerp;
-                    y = p.sy + (p.ty - p.sy) * gatherLerp;
-                    z = p.sz + (tz - p.sz) * gatherLerp;
+                    x = p.sx + (tx - p.sx) * gatherLerp; y = p.sy + (p.ty - p.sy) * gatherLerp; z = p.sz + (tz - p.sz) * gatherLerp;
                 } else { x=p.x; y=p.y; z=p.z-1; if(z<0)z+=2000; p.z=z; }
                 let proj = project(x, y, z);
-                let alpha = (p.color ? (0.3 + gatherLerp*0.6) : 0.4) * bgAlpha;
+                let alpha = (p.color ? (0.3 + gatherLerp*0.6) : 0.4) * bgDim;
                 ctx.fillStyle = (p.color || 'rgba(255,255,255,') + alpha + ')';
                 ctx.beginPath(); ctx.arc(proj.x, proj.y, p.size*proj.scale, 0, Math.PI*2); ctx.fill();
             });
 
-            // 2. 照片逻辑
+            // 2. 绘制照片相册
             ctx.globalCompositeOperation = 'source-over';
             if (photos.length > 0) {
                 let baseVis = Math.max(0, 1 - gatherLerp * 1.5);
                 let newSelected = -1;
-                let minDist = 70; // 选中的触发范围
+                let minDist = 60; 
 
                 photos.forEach((pData, i) => {
                     let isThisSelected = (selectedIdx === i);
-                    let finalAlpha = baseVis * (isolatingLerp > 0 ? (isThisSelected ? 1 : 1-isolatingLerp*1.5) : 1);
+                    // 聚焦时，非选中的照片迅速淡出
+                    let isoVis = isThisSelected ? 1 : (1 - isolatingLerp * 2);
+                    let finalAlpha = baseVis * Math.max(0, isoVis);
 
                     if (finalAlpha > 0.01) {
-                        let px = pData.seedX + Math.sin(time + i) * 25;
-                        let py = pData.seedY + Math.cos(time + i) * 25;
-                        let p = project(px, py, pData.seedZ);
+                        // 初始漂浮坐标
+                        let px = pData.seedX + Math.sin(time + i) * 20;
+                        let py = pData.seedY + Math.cos(time + i) * 20;
+                        let pProj = project(px, py, pData.seedZ);
 
-                        // 划动检测：只有在未聚焦时探测
+                        // 划动检测
                         if (baseVis > 0.5 && isHandVisible && isolatingLerp < 0.1) {
-                            let d = Math.hypot(p.x - pointerPos.x, p.y - pointerPos.y);
+                            let d = Math.hypot(pProj.x - pointerPos.x, pProj.y - pointerPos.y);
                             if (d < minDist) { minDist = d; newSelected = i; }
                         }
 
                         pData.selectLerp += (isThisSelected ? 1 : 0 - pData.selectLerp) * 0.15;
                         
                         ctx.save();
-                        ctx.globalAlpha = Math.max(0, finalAlpha);
+                        ctx.globalAlpha = finalAlpha;
 
-                        // 坐标插值：散开位置 -> 屏幕正中心
-                        let curX = p.x + (w/2 - p.x) * (isThisSelected ? isolatingLerp : 0);
-                        let curY = p.y + (h/2 - p.y) * (isThisSelected ? isolatingLerp : 0);
+                        // 【核心】位置计算：如果选中并聚焦，向屏幕中心 (w/2, h/2) 位移
+                        let curX = pProj.x + (w/2 - pProj.x) * (isThisSelected ? isolatingLerp : 0);
+                        let curY = pProj.y + (h/2 - pProj.y) * (isThisSelected ? isolatingLerp : 0);
                         ctx.translate(curX, curY);
 
-                        // 关键修改：缩放逻辑
-                        // 1. 散开状态：0.15 (非常小)
-                        // 2. 选中状态：0.25 (稍微变大提醒)
-                        // 3. 捏合状态：固定大尺寸 (通过 w*0.8 控制)
-                        let baseScale = p.scale * (0.12 + pData.selectLerp * 0.13); 
-                        let targetFixedScale = (w * 0.8) / pData.img.width; // 目标是屏幕宽度的80%
-                        let finalScale = baseScale + (targetFixedScale - baseScale) * (isThisSelected ? isolatingLerp : 0);
+                        // 【核心】缩放计算
+                        let scatterScale = pProj.scale * (0.12 + pData.selectLerp * 0.1); 
+                        let targetLargeScale = (Math.min(w, h) * 0.8) / pData.img.width; // 屏幕宽/高中较小值的80%
+                        let finalScale = scatterScale + (targetLargeScale - scatterScale) * (isThisSelected ? isolatingLerp : 0);
 
                         ctx.drawImage(pData.img, -pData.img.width*finalScale/2, -pData.img.height*finalScale/2, pData.img.width*finalScale, pData.img.height*finalScale);
                         
-                        // 装饰：选中时加金边，聚焦时加厚边框
-                        if (pData.selectLerp > 0.1 || (isThisSelected && isolatingLerp > 0.1)) {
-                            ctx.strokeStyle = `rgba(255, 215, 0, ${Math.max(pData.selectLerp, isolatingLerp)})`;
-                            ctx.lineWidth = 1 + isolatingLerp * 4;
+                        // 聚焦时的精美边框
+                        if (isThisSelected && isolatingLerp > 0.05) {
+                            ctx.strokeStyle = `rgba(255, 215, 0, ${isolatingLerp})`;
+                            ctx.lineWidth = 1 + isolatingLerp * 3;
                             ctx.strokeRect(-pData.img.width*finalScale/2, -pData.img.height*finalScale/2, pData.img.width*finalScale, pData.img.height*finalScale);
                         }
                         ctx.restore();
@@ -164,9 +163,9 @@
                 if (!isPinching) selectedIdx = newSelected;
             }
 
-            // 指尖指示器
-            if (isHandVisible && gatherLerp < 0.5 && isolatingLerp < 0.5) {
-                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            // 指尖小白点（仅在探索模式下显示）
+            if (isHandVisible && gatherLerp < 0.5 && isolatingLerp < 0.2) {
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
                 ctx.beginPath(); ctx.arc(pointerPos.x, pointerPos.y, 4, 0, Math.PI*2); ctx.fill();
             }
 
@@ -181,19 +180,15 @@
                     isHandVisible = true;
                     const lm = res.multiHandLandmarks[0];
                     pointerPos.x = (1 - lm[8].x) * w; pointerPos.y = lm[8].y * h;
-                    // 捏合判断：食指尖与大拇指尖距离
                     isPinching = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y) < 0.07;
-                    document.getElementById('status').innerText = isPinching ? "📸 正在查看回忆" : "☝️ 移动指尖寻找照片";
-                } else {
-                    isHandVisible = false; isPinching = false;
-                    document.getElementById('status').innerText = "👋 伸出手掌开启体验";
-                }
+                } else { isHandVisible = false; isPinching = false; }
             });
             const cam = new Camera(document.getElementById('v'), { 
                 onFrame: async () => { await hands.send({image: document.getElementById('v')}); }, 
                 width: 320, height: 240 
             });
             cam.start();
+            document.getElementById('status').innerText = "🖐️ 挥手开启，捏合聚焦";
         }
 
         resize();
@@ -204,9 +199,7 @@
             img.onload = () => {
                 photos.push({ 
                     img, selectLerp: 0,
-                    seedX: (Math.random()-0.5)*w*2.5, 
-                    seedY: (Math.random()-0.5)*h*2.5, 
-                    seedZ: 100 + Math.random()*800 
+                    seedX: (Math.random()-0.5)*w*2.5, seedY: (Math.random()-0.5)*h*2.5, seedZ: 100 + Math.random()*800 
                 });
                 if(++loaded === totalPhotos) { initAI(); animate(); }
             };
