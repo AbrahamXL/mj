@@ -20,66 +20,28 @@
             font-weight: normal;
             margin: 0;
             padding: 0 20px;
-            /* 字符间距优化 */
             letter-spacing: 0.15em;
-            
-            /* 背景流光：香槟金到玫瑰金的转换 */
-            background: linear-gradient(
-                to bottom,
-                #fff 20%,
-                #ffd700 40%,
-                #ff8c00 70%,
-                #8b4513 90%
-            );
+            background: linear-gradient(to bottom, #fff 20%, #ffd700 40%, #ff8c00 70%, #8b4513 90%);
             background-size: 100% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-
-            /* 多层艺术阴影：营造霓虹与立体的混合感 */
-            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8))
-                    drop-shadow(0 0 20px rgba(255, 140, 0, 0.4));
-            
-            /* 呼吸动画 */
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 20px rgba(255, 140, 0, 0.4));
             animation: titlePulse 4s ease-in-out infinite alternate, glowMove 8s linear infinite;
         }
-
-        /* 2026数字特殊处理 */
         #main-title span {
-            font-family: 'Playfair Display', serif;
-            font-style: italic;
-            font-weight: 900;
-            font-size: 6rem;
-            margin-right: 15px;
-            letter-spacing: -0.05em;
-            vertical-align: middle;
+            font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 6rem; margin-right: 15px; letter-spacing: -0.05em; vertical-align: middle;
         }
-
-        /* 标题脉冲动画 */
         @keyframes titlePulse {
-            from {
-                transform: scale(1) translateY(0);
-                filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8)) blur(0px);
-            }
-            to {
-                transform: scale(1.02) translateY(-5px);
-                filter: drop-shadow(0 0 25px rgba(255, 215, 0, 1)) blur(0.5px);
-            }
+            from { transform: scale(1) translateY(0); filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8)) blur(0px); }
+            to { transform: scale(1.02) translateY(-5px); filter: drop-shadow(0 0 25px rgba(255, 215, 0, 1)) blur(0.5px); }
         }
-
-        /* 内部流光移动 */
-        @keyframes glowMove {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 0% 200%; }
-        }
-        /* ----------------------- */
+        @keyframes glowMove { 0% { background-position: 0% 0%; } 100% { background-position: 0% 200%; } }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); 
-            padding: 14px 40px; border-radius: 50px; 
-            border: 1px solid rgba(255,215,0,0.2);
-            backdrop-filter: blur(20px); font-size: 0.85rem; z-index: 100; 
-            letter-spacing: 2px; text-transform: uppercase;
+            padding: 14px 40px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.2);
+            backdrop-filter: blur(20px); font-size: 0.85rem; z-index: 100; letter-spacing: 2px; text-transform: uppercase;
         }
         
         #reticle {
@@ -89,7 +51,6 @@
             animation: rotateReticle 4s linear infinite;
         }
         @keyframes rotateReticle { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-
         #video-input { display: none; }
     </style>
 </head>
@@ -98,7 +59,6 @@
     <div id="title-container">
         <h1 id="main-title"><span>2026</span>元旦快乐</h1>
     </div>
-    
     <div id="container">
         <div id="info-instructions">Initiating Winter Magic...</div>
         <video id="video-input" playsinline></video>
@@ -109,21 +69,26 @@
     <script src="https://unpkg.com/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        // ... (以下 Three.js 和 MediaPipe 逻辑保持不变，确保交互功能完美运行) ...
         let scene, camera, renderer, particleSystem, mainGroup, snowSystem, imageGroup;
         let treePos = [], starPos = [], currentPos = [], targetColors = [], currentColors = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
         let zoomedImage = null, selectedImage = null;
+        let particleSizes = []; // 新增：用于存储每个粒子的大小
 
-        const COUNT = 3500;
+        // 增加粒子数量以支持更丰富的细节
+        const COUNT = 4500;
         const IMG_COUNT = 10;
 
         function createStarTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
+            // 使用更柔和的金色光晕
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            grad.addColorStop(0, 'white'); grad.addColorStop(1, 'transparent');
+            grad.addColorStop(0, 'rgba(255,255,240,1)');
+            grad.addColorStop(0.2, 'rgba(255,215,100,0.8)');
+            grad.addColorStop(0.5, 'rgba(200,100,50,0.3)');
+            grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
         }
@@ -141,10 +106,10 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
+            // 图片加载 (保持不变)
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
-            
             for(let i=1; i<=IMG_COUNT; i++) {
                 const texture = loader.load(`./mj/${i}.jpg`, (tex) => {
                     const aspect = tex.image.width / tex.image.height;
@@ -153,51 +118,123 @@
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide, depthTest: true });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6, 9), material);
                 mesh.renderOrder = 0; 
-
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                const radius = 18;
+                const radius = 20; // 稍微扩大一点图片圈
                 mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
                 mesh.lookAt(0, 0, 0); 
                 mesh.userData = { originalPos: mesh.position.clone(), originalRot: mesh.rotation.clone() };
                 imageGroup.add(mesh);
             }
 
+            // --- 全新设计的奢华蛋糕粒子系统 ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
-            const tiers = [{ r: 12, h: 5.5, y: -10 }, { r: 8.5, h: 5.5, y: -4.5 }, { r: 5, h: 5.5, y: 1.0 }];
+            const sizeArr = new Float32Array(COUNT); // 新增大小属性
+            
+            // 定义蛋糕层级结构
+            const tiers = [
+                { r: 13, h: 6, y: -11 },
+                { r: 9.5, h: 6, y: -5 },
+                { r: 6, h: 6, y: 1 }
+            ];
+
+            // 定义奢华配色盘 (红丝绒金饰主题)
+            const palette = {
+                cakeDeep: new THREE.Color(0x8B0000),   // 深红丝绒
+                cakeLight: new THREE.Color(0xDC143C),  // 绯红
+                cream: new THREE.Color(0xFFF8DC),      // 象牙奶油
+                gold: new THREE.Color(0xFFD700),       // 奢华金
+                highlight: new THREE.Color(0xFFFFFF)   // 高光白
+            };
 
             for(let i=0; i<COUNT; i++) {
                 let vTree = new THREE.Vector3();
                 let pColor = new THREE.Color();
-                let tierIdx = i < COUNT*0.4 ? 0 : (i < COUNT*0.8 ? 1 : 2);
+                let pSize = 0.6; // 基础大小
+
+                // 决定粒子属于哪一层
+                let tierIdx;
+                if (i < COUNT * 0.45) tierIdx = 0;
+                else if (i < COUNT * 0.8) tierIdx = 1;
+                else tierIdx = 2;
+                
                 const t = tiers[tierIdx];
                 const angle = Math.random() * Math.PI * 2;
-                if (Math.random() > 0.3) {
-                    vTree.set(t.r * (0.95 + Math.random()*0.1) * Math.cos(angle), t.y + Math.random()*t.h, t.r * (0.95 + Math.random()*0.1) * Math.sin(angle));
-                    pColor.setHex(0xFFFDD0);
-                } else {
-                    const r = Math.sqrt(Math.random()) * t.r;
-                    vTree.set(r * Math.cos(angle), t.y + t.h, r * Math.sin(angle));
-                    pColor.setHex(0xFFFFFF);
+                const typeRoll = Math.random(); // 用于决定粒子类型的随机数
+
+                if (typeRoll > 0.3) {
+                    // === 类型1: 蛋糕主体 (红丝绒体) ===
+                    // 带有随机抖动的圆柱体分布，模拟松软感
+                    const r = t.r * (0.9 + Math.sqrt(Math.random()) * 0.12);
+                    const hRel = Math.random(); // 相对高度 0-1
+                    vTree.set(r * Math.cos(angle), t.y + hRel * t.h, r * Math.sin(angle));
+                    // 颜色纵向渐变：底部深红 -> 顶部绯红，增加立体感
+                    pColor.lerpColors(palette.cakeDeep, palette.cakeLight, hRel * 0.8 + 0.1);
+                    pSize = 0.5 + Math.random() * 0.3;
+                } 
+                else if (typeRoll > 0.12) {
+                    // === 类型2: 金边裱花/装饰线 (高密度金色) ===
+                    // 集中在每一层的底部边缘和顶部边缘
+                    const isTopEdge = Math.random() > 0.5;
+                    const r = t.r * (1.01 + Math.random() * 0.03); // 稍微突出表面
+                    const yEdge = isTopEdge ? t.y + t.h : t.y;
+                    vTree.set(r * Math.cos(angle), yEdge + (Math.random()-0.5)*0.4, r * Math.sin(angle));
+                    // 金色为主，混入一点奶油色
+                    pColor.lerpColors(palette.gold, palette.cream, Math.random() * 0.3);
+                    pSize = 0.4 + Math.random() * 0.4; // 较小但密集
                 }
+                else {
+                    // === 类型3: 散落的珠宝/糖珠 (大颗高光) ===
+                    // 随机散布在表面
+                    const r = t.r * (1.02 + Math.random() * 0.05);
+                    vTree.set(r * Math.cos(angle), t.y + Math.random() * t.h, r * Math.sin(angle));
+                    // 随机选择金色珠子或珍珠白
+                    pColor.copy(Math.random() > 0.4 ? palette.gold : palette.highlight);
+                    pSize = 0.8 + Math.random() * 0.6; // 明显较大
+                }
+
+                // 顶部装饰 (最顶层额外加点料)
+                if (tierIdx === 2 && Math.random() > 0.97) {
+                     vTree.y += Math.random() * 2;
+                     vTree.multiplyScalar(Math.random() * 0.5); // 收束到中心
+                     pColor.copy(palette.gold);
+                     pSize = 1.0;
+                }
+
                 treePos.push(vTree);
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(30 + Math.random()*20, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(35 + Math.random()*25, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(vTree.clone());
                 targetColors.push(pColor.clone());
                 currentColors.push(pColor.clone());
+                particleSizes.push(pSize);
+
                 posArr[i*3] = vTree.x; posArr[i*3+1] = vTree.y; posArr[i*3+2] = vTree.z;
                 colArr[i*3] = pColor.r; colArr[i*3+1] = pColor.g; colArr[i*3+2] = pColor.b;
+                sizeArr[i] = pSize;
             }
 
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-            particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.6, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false }));
+            // 使用 size 属性
+            geo.setAttribute('size', new THREE.BufferAttribute(sizeArr, 1));
+
+            // 修改材质以支持不同大小的粒子
+            particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ 
+                size: 1.0, // 全局基础大小，会与顶点 size 相乘
+                map: createStarTexture(), 
+                transparent: true, 
+                blending: THREE.AdditiveBlending, 
+                vertexColors: true, 
+                depthWrite: false,
+                sizeAttenuation: true // 开启近大远小
+            }));
             mainGroup.add(particleSystem);
 
+            // 雪花 (更密一些，营造氛围)
             const snowGeo = new THREE.BufferGeometry();
-            const snowPosArr = new Float32Array(800 * 3);
-            for(let i=0; i<800*3; i++) snowPosArr[i] = (Math.random()-0.5)*120;
+            const snowPosArr = new Float32Array(1000 * 3);
+            for(let i=0; i<1000*3; i++) snowPosArr[i] = (Math.random()-0.5)*130;
             snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPosArr, 3));
             snowSystem = new THREE.Points(snowGeo, new THREE.PointsMaterial({ size: 0.3, color: 0xffffff, transparent: true, opacity: 0.4 }));
             scene.add(snowSystem);
@@ -254,10 +291,13 @@
             }
 
             const posAttr = particleSystem.geometry.attributes.position;
+            // 动画循环中不需要更新 color 和 size，除非你要做动态变色
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 posAttr.array[i*3] = currentPos[i].x;
-                posAttr.array[i*3+1] = currentPos[i].y + Math.sin(now*0.001+i)*0.03;
+                // 蛋糕形态时，呼吸幅度小一点，显得稳重
+                const breathing = morphFactor > 0.5 ? Math.sin(now*0.001+i)*0.04 : Math.sin(now*0.002+i)*0.01;
+                posAttr.array[i*3+1] = currentPos[i].y + breathing;
                 posAttr.array[i*3+2] = currentPos[i].z;
             }
             posAttr.needsUpdate = true;
