@@ -2,35 +2,60 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 修复版</title>
+    <title>2026元旦快乐 - 交互影像装置</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a0000 0%, #000 100%); }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
+        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); }
         
-        /* 文字布局 */
+        /* 文字容器设计 - 移至中上方 */
         #title-container {
-            position: absolute; top: 12%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
+            position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
         }
+
         #main-title {
-            font-family: 'ZCOOL XiaoWei', serif; line-height: 1.2; color: transparent;
-            background-image: linear-gradient(135deg, #FFFBE6 0%, #FFD700 50%, #C0A060 100%);
-            background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
-            filter: drop-shadow(0 0 15px rgba(255, 150, 0, 0.3));
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.2;
+            color: transparent;
+            background-image: linear-gradient(
+                135deg,
+                #FFF5E1 0%,    /* 珍珠白 */
+                #FFD1DC 20%,   /* 玫瑰粉 */
+                #E6C778 50%,   /* 香槟金 */
+                #B0E0E6 80%,   /* 文气青蓝 */
+                #C0A060 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 
+                0px 2px 3px rgba(255,255,255,0.3),
+                0px 10px 30px rgba(230, 199, 120, 0.2);
             animation: artisticShimmer 6s linear infinite alternate;
         }
-        #main-title .year { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 6.5rem; display: block; }
-        #main-title .bless-1 { font-size: 3.5rem; display: block; letter-spacing: 0.15em; }
-        #main-title .bless-2 { font-size: 2.2rem; display: block; letter-spacing: 0.4em; opacity: 0.8; margin-top: 5px; }
 
-        @keyframes artisticShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        /* 2026 样式 */
+        #main-title .year {
+            font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900;
+            font-size: 7rem; display: block; filter: brightness(1.2);
+        }
+
+        /* 祝福语 样式 */
+        #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -10px; }
+        #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 0.9; margin-top: 10px; }
+
+        @keyframes artisticShimmer {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: #E6C778; background: rgba(255,255,255,0.05); 
-            padding: 12px 30px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.3);
-            backdrop-filter: blur(10px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
+            color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); 
+            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(230,199,120,0.2);
+            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
         }
+        
         #video-input { display: none; }
     </style>
 </head>
@@ -44,20 +69,21 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在准备皇家庆典...</div>
+        <div id="info-instructions">正在启动 2026 祝福装置...</div>
         <video id="video-input" playsinline></video>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://unpkg.com/three@0.150.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/@mediapipe/hands/hands.js"></script>
+    <script src="https://unpkg.com/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-        let scene, camera, renderer, particleSystem, mainGroup;
+        let scene, camera, renderer, particleSystem, mainGroup, imageGroup;
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        const COUNT = 5000;
+        const COUNT = 6000; // 略微增加粒子数
+        const IMG_COUNT = 10;
 
         function createStarTexture() {
             const canvas = document.createElement('canvas');
@@ -65,7 +91,7 @@
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
             grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.3, 'rgba(255,200,100,0.6)');
+            grad.addColorStop(0.3, 'rgba(255,230,150,0.8)'); // 偏金色的光晕
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
@@ -74,7 +100,7 @@
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
-            camera.position.z = 60;
+            camera.position.z = 65;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -84,39 +110,85 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // --- 皇家丝绒蛋糕逻辑 ---
+            // 照片环
+            imageGroup = new THREE.Group();
+            mainGroup.add(imageGroup);
+            const loader = new THREE.TextureLoader();
+            for(let i=1; i<=IMG_COUNT; i++) {
+                const texture = loader.load(`./mj/${i}.jpg`, undefined, undefined, () => {});
+                const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
+                const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
+                const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
+                mesh.position.set(Math.cos(angle) * 28, -2, Math.sin(angle) * 28);
+                mesh.lookAt(0, -2, 0); 
+                imageGroup.add(mesh);
+            }
+
+            // --- 重新设计的“红绒流金”蛋糕逻辑 ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
             
-            const tiers = [{ r: 12, h: 6, y: -12 }, { r: 8.5, h: 5, y: -6 }, { r: 5, h: 4, y: -1 }];
-            const colors = { red: new THREE.Color(0x8B0000), gold: new THREE.Color(0xFFD700), light: new THREE.Color(0xFFF7BB) };
+            // 颜色定义
+            const colors = {
+                velvet: new THREE.Color(0x800000), // 深红丝绒
+                gold: new THREE.Color(0xFFD700),   // 明亮金
+                cream: new THREE.Color(0xFFFDD0),  // 奶油白
+                flame: new THREE.Color(0xFF8C00)   // 橙火
+            };
+
+            const tiers = [
+                { r: 13, h: 6, y: -14 }, // 底层
+                { r: 9, h: 5, y: -8 },  // 中层
+                { r: 5, h: 4, y: -3 }   // 顶层
+            ];
 
             for(let i=0; i<COUNT; i++) {
                 let v = new THREE.Vector3();
                 let c = new THREE.Color();
                 let angle = Math.random() * Math.PI * 2;
 
-                if (i < 1500) { // 流金瀑布 (中层装饰)
+                if (i < 1200) { 
+                    // 1. 金色流沙效果 (中层边缘)
                     const t = tiers[1];
-                    const r = t.r * (1.02 + Math.random()*0.02);
-                    const h = Math.random() * t.h;
-                    v.set(r * Math.cos(angle), t.y + t.h - h, r * Math.sin(angle));
-                    c.copy(colors.gold).multiplyScalar(0.7 + Math.random()*0.3);
-                } else if (i < 2200) { // 顶层圣火
+                    const drip = Math.random() * Math.random() * 4; // 随机流淌长度
+                    const r = t.r * 1.05;
+                    v.set(r * Math.cos(angle), t.y + t.h - drip, r * Math.sin(angle));
+                    c.copy(colors.gold).lerp(colors.velvet, 0.2);
+                } 
+                else if (i < 2000) {
+                    // 2. 底部金色珍珠围边 (底层基座)
+                    const t = tiers[0];
+                    const r = t.r * 1.08;
+                    const pAngle = (Math.floor(i/30) * 0.2); // 形成颗粒感
+                    v.set(r * Math.cos(pAngle), t.y, r * Math.sin(pAngle));
+                    c.copy(colors.gold);
+                }
+                else if (i < 2600) {
+                    // 3. 顶端跳动圣火
                     const t = tiers[2];
-                    const r = Math.random() * 1.5 * (1 - Math.random());
-                    v.set(r * Math.cos(angle), t.y + t.h + Math.random()*5, r * Math.sin(angle));
-                    c.copy(colors.light);
-                } else { // 蛋糕主体 (深红丝绒)
-                    const t = i < COUNT*0.6 ? tiers[0] : (i < COUNT*0.85 ? tiers[1] : tiers[2]);
-                    const r = t.r * (0.9 + Math.random()*0.1);
-                    v.set(r * Math.cos(angle), t.y + Math.random()*t.h, r * Math.sin(angle));
-                    c.copy(colors.red).multiplyScalar(0.6 + Math.random()*0.4);
+                    const r = Math.random() * 1.2 * (1 - Math.random());
+                    const h = Math.random() * 6;
+                    v.set(r * Math.cos(angle), t.y + t.h + h, r * Math.sin(angle));
+                    // 火焰渐变色
+                    c.copy(colors.gold).lerp(colors.flame, h/6);
+                }
+                else {
+                    // 4. 蛋糕主体填充
+                    let t;
+                    if (i < 4500) t = tiers[0];
+                    else if (i < 5500) t = tiers[1];
+                    else t = tiers[2];
+
+                    const r = Math.random() * t.r;
+                    v.set(r * Math.cos(angle), t.y + Math.random() * t.h, r * Math.sin(angle));
+                    
+                    // 表面深红，内部偏暗，模拟质感
+                    c.copy(colors.velvet).multiplyScalar(0.7 + (r/t.r)*0.3);
                 }
 
                 treePos.push(v.clone());
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(40 + Math.random()*20, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(45 + Math.random()*25, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(v.clone());
                 
                 posArr[i*3] = v.x; posArr[i*3+1] = v.y; posArr[i*3+2] = v.z;
@@ -127,7 +199,7 @@
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
 
             particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 0.8, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
+                size: 0.9, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
                 vertexColors: true, depthWrite: false, sizeAttenuation: true 
             }));
             mainGroup.add(particleSystem);
@@ -138,17 +210,27 @@
         function animate() {
             requestAnimationFrame(animate);
             const now = Date.now();
-            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.15);
+            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.2);
             
             mainGroup.rotation.y += 0.003;
             mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY, 0.1);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
+            imageGroup.children.forEach((mesh) => {
+                mesh.material.opacity = THREE.MathUtils.lerp(0, 0.8, (morphFactor - 0.2) * 5);
+                mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.1, 0.01, 1.1));
+            });
+
             const posAttr = particleSystem.geometry.attributes.position;
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
+                
+                // 仅在聚合状态下添加细微的动态抖动
+                let noise = Math.sin(now * 0.002 + i) * 0.03;
+                if (i >= 2000 && i < 2600) noise = Math.sin(now * 0.008 + i) * 0.15; // 火苗抖动更剧烈
+
                 posAttr.array[i*3] = currentPos[i].x;
-                posAttr.array[i*3+1] = currentPos[i].y + Math.sin(now * 0.002 + i) * 0.05;
+                posAttr.array[i*3+1] = currentPos[i].y + noise;
                 posAttr.array[i*3+2] = currentPos[i].z;
             }
             posAttr.needsUpdate = true;
@@ -158,8 +240,8 @@
         async function startAI() {
             const info = document.getElementById('info-instructions');
             try {
-                const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-                hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
+                const hands = new Hands({ locateFile: (file) => `https://unpkg.com/@mediapipe/hands/${file}` });
+                hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7 });
                 
                 hands.onResults(res => {
                     if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
@@ -168,11 +250,11 @@
                         let openCount = 0;
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
-                        targetRotY = (0.5 - h[9].x) * 5;
+                        targetRotY = (0.5 - h[9].x) * 6;
                         targetRotX = (h[9].y - 0.5) * 3;
-                        info.innerHTML = "✨ 祝你：学业有成，前程似锦";
+                        info.innerHTML = "✨ 新年光环已开启 | 移动手掌控制视角";
                     } else {
-                        info.innerText = "👋 挥挥手，开启 2026 的光芒";
+                        info.innerText = "👋 挥挥手开启 2026 祝福";
                     }
                 });
 
@@ -182,16 +264,16 @@
                 });
                 cam.start();
             } catch(e) {
-                info.innerText = "👋 请确保已授权摄像头";
+                info.innerText = "⚠️ 摄像头已静默运行";
             }
         }
 
         window.onload = () => { init(); startAI(); };
-        window.onresize = () => {
+        window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        };
+        });
     </script>
 </body>
 </html>
