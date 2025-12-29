@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 浪漫星海版</title>
+    <title>2026元旦快乐 - 极致浪漫星海版</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
-        /* 背景更加深邃，对比出星星的亮度 */
-        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #120a00 0%, #000 100%); }
+        /* 背景更深，对比度更高 */
+        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0f0800 0%, #000 100%); }
         
         #title-container {
             position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 100;
@@ -17,39 +17,26 @@
             font-family: 'ZCOOL XiaoWei', serif;
             font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.1;
             color: transparent;
-            background-image: linear-gradient(
-                135deg,
-                #FFFFFF 0%,    /* 钻白 */
-                #FFD700 40%,   /* 纯金 */
-                #E6C778 70%,   /* 香槟 */
-                #B8860B 100%   /* 暗金 */
-            );
+            background-image: linear-gradient(135deg, #FFFFFF 0%, #FFD700 40%, #E6C778 70%, #B8860B 100%);
             background-size: 200% auto;
             -webkit-background-clip: text;
             background-clip: text;
-            filter: drop-shadow(0px 0px 2px rgba(0,0,0,1)) 
-                    drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.4));
+            filter: drop-shadow(0px 0px 2px rgba(0,0,0,1)) drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.4));
             animation: artisticShimmer 4s linear infinite alternate;
         }
 
-        #main-title .year {
-            font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900;
-            font-size: 7.5rem; display: block; letter-spacing: -2px;
-        }
-
+        #main-title .year { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 7.5rem; display: block; letter-spacing: -2px; }
         #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -5px; font-weight: bold; }
         #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 1; margin-top: 15px; }
 
-        @keyframes artisticShimmer {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 100% 50%; }
-        }
+        @keyframes artisticShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.5); 
+            color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.6); 
             padding: 12px 35px; border-radius: 50px; border: 1px solid #FFD700;
             backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
         }
         
         #video-input { display: none; }
@@ -65,7 +52,7 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在汇聚浪漫星海...</div>
+        <div id="info-instructions">正在汇聚极致星海...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -76,29 +63,29 @@
     <script>
         let scene, camera, renderer, particleSystem, mainGroup, imageGroup;
         let treePos = [], starPos = [], currentPos = [];
-        let baseSizes = []; // 用于存储粒子的基础大小
+        let baseSizes = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
         const COUNT = 6500;
         const IMG_COUNT = 10;
 
-        // 纹理保持暖金色，光晕更柔和
+        // 纹理优化：核心更亮，边缘更柔和，适合大光斑
         function createStarTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 64; canvas.height = 64;
+            canvas.width = 128; canvas.height = 128; // 提高纹理分辨率
             const ctx = canvas.getContext('2d');
-            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.15, 'rgba(255,240,180,0.9)'); // 更暖更亮的核心
-            grad.addColorStop(0.5, 'rgba(255,200,100,0.3)'); // 柔和边缘
+            const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');     // 极亮核心
+            grad.addColorStop(0.1, 'rgba(255,245,200,0.9)'); // 暖白过渡
+            grad.addColorStop(0.4, 'rgba(255,220,120,0.3)'); // 金色柔焦
             grad.addColorStop(1, 'transparent');
-            ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128);
             return new THREE.CanvasTexture(canvas);
         }
 
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 2000); // 增加远裁剪面
             camera.position.z = 65;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -109,7 +96,6 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // 照片环
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
@@ -123,12 +109,11 @@
                 imageGroup.add(mesh);
             }
 
-            // --- 流金星云光球 ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
-            const sizeArr = new Float32Array(COUNT); // 新增 size 属性数组
-            baseSizes = new Float32Array(COUNT); // 存储基础大小
+            const sizeArr = new Float32Array(COUNT);
+            baseSizes = new Float32Array(COUNT);
             
             const palette = {
                 bright: new THREE.Color(0xFFFFFF),
@@ -139,13 +124,13 @@
             for(let i=0; i<COUNT; i++) {
                 let v = new THREE.Vector3();
                 let c = new THREE.Color();
-                let s = 0.8; // 默认基础大小
+                let s = 1.0;
                 
                 if (i < 2500) { // 核心
                     const r = 8 * Math.cbrt(Math.random());
                     v.setFromSphericalCoords(r, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
                     c.lerpColors(palette.gold, palette.bright, 1 - r/8);
-                    s = 0.6 + Math.random() * 0.4;
+                    s = 0.8 + Math.random() * 0.5;
                 } 
                 else if (i < 5500) { // 轨道
                     const orbitIdx = (i - 2500) % 3;
@@ -155,20 +140,22 @@
                     const axis = new THREE.Vector3(Math.cos(orbitIdx), 1, Math.sin(orbitIdx)).normalize();
                     v.applyAxisAngle(axis, Math.PI / 4);
                     c.lerpColors(palette.amber, palette.gold, (Math.sin(angle)+1)/2);
-                    s = 0.7 + Math.random() * 0.3;
+                    s = 0.9 + Math.random() * 0.6;
                 }
-                else { // 外围星尘
-                    const r = 20 + Math.random() * 15;
+                else { // 外围星尘 - 关键调整
+                    // 增大分布范围
+                    const r = 25 + Math.random() * 30;
                     v.setFromSphericalCoords(r, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
-                    c.copy(palette.gold).multiplyScalar(0.6);
-                    s = 0.5 + Math.random() * 1.0; // 外围粒子大小差异更大，制造景深感
+                    c.copy(palette.gold).multiplyScalar(0.7);
+                    // 制造巨大的尺寸差异，形成景深感。使用三次方让大粒子少而精。
+                    s = 0.6 + Math.pow(Math.random(), 3) * 4.0; 
                 }
 
                 treePos.push(v.clone());
-                // --- 关键修改：拉大散开后的位置范围，制造纵深 ---
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(80 + Math.random()*80, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                // 散开范围极大
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(100 + Math.random()*150, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(v.clone());
-                baseSizes[i] = s; // 记录基础大小
+                baseSizes[i] = s;
                 
                 posArr[i*3] = v.x; posArr[i*3+1] = v.y; posArr[i*3+2] = v.z;
                 colArr[i*3] = c.r; colArr[i*3+1] = c.g; colArr[i*3+2] = c.b;
@@ -177,17 +164,16 @@
 
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-            // 启用 size 属性
             geo.setAttribute('size', new THREE.BufferAttribute(sizeArr, 1));
 
             particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 1.0, // 基础材质尺寸
+                size: 1.0,
                 map: createStarTexture(), 
                 transparent: true, 
                 blending: THREE.AdditiveBlending, 
                 vertexColors: true, 
                 depthWrite: false, 
-                sizeAttenuation: true // 开启近大远小
+                sizeAttenuation: true 
             }));
             mainGroup.add(particleSystem);
 
@@ -214,28 +200,29 @@
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 
-                // --- 核心修改：营造浪漫星海 ---
-                // 1. 基础呼吸律动 (光球形态时)
-                let pulse = Math.sin(now * 0.002 + (i % 100)) * 0.05;
+                // 1. 形态呼吸 (光球状态下)
+                let formPulse = Math.sin(now * 0.002 + (i % 100)) * 0.05 * (1-morphFactor);
                 
-                // 2. 浪漫闪烁计算 (Romantic Twinkle)
-                // 使用不同的频率和相位，让每颗星的闪烁都不同
-                let twinkle = Math.sin(now * 0.0015 + i * 0.1) * 0.3 + 0.7; 
+                // 2. 浪漫呼吸闪烁 (Romantic Breathing Twinkle)
+                // 使用更慢、更深的呼吸曲线
+                let breath = (Math.sin(now * 0.0008 + i * 0.05) + 1) / 2; // 0到1的缓慢变化
+                // 散开后，亮度范围 dramatically 增加，最高可达基础亮度的2倍以上
+                let brightnessRange = 0.5 + morphFactor * 1.5; 
+                let twinkle = 0.5 + breath * brightnessRange;
 
-                // 3. 散开后的尺寸放大 (Scatter Size Boost)
-                // 当 morphFactor 接近 1 时，粒子尺寸显著增大 (最大放大约 2.5 倍)
-                let scatterBoost = 1 + morphFactor * 1.5;
+                // 3. 散开后的尺寸指数级放大 (Exponential Size Boost)
+                // 使用 pow 让散开后期的放大效果极具张力，最大约 5 倍
+                let scatterBoost = 1 + Math.pow(morphFactor, 2) * 4.0;
 
-                // 应用位置更新 (带一点微弱浮动)
-                posAttr.array[i*3] = currentPos[i].x * (1 + pulse * (1-morphFactor));
-                posAttr.array[i*3+1] = currentPos[i].y * (1 + pulse * (1-morphFactor));
-                posAttr.array[i*3+2] = currentPos[i].z * (1 + pulse * (1-morphFactor));
+                posAttr.array[i*3] = currentPos[i].x * (1 + formPulse);
+                posAttr.array[i*3+1] = currentPos[i].y * (1 + formPulse);
+                posAttr.array[i*3+2] = currentPos[i].z * (1 + formPulse);
 
-                // 应用尺寸更新：基础大小 * 散开放大系数 * 闪烁系数
+                // 最终尺寸 = 基础大小 * 散开放大 * 呼吸闪烁
                 sizeAttr.array[i] = baseSizes[i] * scatterBoost * twinkle;
             }
             posAttr.needsUpdate = true;
-            sizeAttr.needsUpdate = true; // 重要：通知 GPU 更新尺寸
+            sizeAttr.needsUpdate = true;
             renderer.render(scene, camera);
         }
 
@@ -254,7 +241,7 @@
                         targetMorph = openCount / 4;
                         targetRotY = (0.5 - h[9].x) * 4;
                         targetRotX = (h[9].y - 0.5) * 2;
-                        info.innerHTML = morphFactor > 0.5 ? "✨ 浪漫星海已开启 | 移动手掌控制视角" : "✊ 握拳汇聚能量，🖐️ 张开释放星海";
+                        info.innerHTML = morphFactor > 0.5 ? "✨ 沉浸于浪漫星海 | 移动手掌" : "✊ 握拳汇聚，🖐️ 张开释放星海";
                     } else {
                         info.innerText = "👋 挥挥手，开启 2026 辉煌篇章";
                     }
