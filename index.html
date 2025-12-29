@@ -86,7 +86,7 @@
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
             grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.2, 'rgba(255,230,150,0.7)'); // 降低一点浓度
+            grad.addColorStop(0.2, 'rgba(255,230,150,0.7)');
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
@@ -187,20 +187,15 @@
                 mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.1, 0.01, 1.1));
             });
 
-            // --- 精准微调：散开后的明显度控制 ---
-            // 降低最大尺寸，从 2.8 降到 1.8，既明显又不过分
+            // 保持背景繁星效果
             particleSystem.material.size = 0.8 + (morphFactor * 1.0);
-            // 控制透明度上限在 0.8，避免太刺眼
             particleSystem.material.opacity = 0.6 + (morphFactor * 0.2);
 
             const posAttr = particleSystem.geometry.attributes.position;
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
-                
-                // 呼吸感放缓：降低幅度，让闪烁更优雅
                 let breathScale = 0.05 + (morphFactor * 0.05); 
                 let pulse = Math.sin(now * 0.0015 + (i % 100)) * breathScale;
-                
                 posAttr.array[i*3] = currentPos[i].x * (1 + pulse);
                 posAttr.array[i*3+1] = currentPos[i].y * (1 + pulse);
                 posAttr.array[i*3+2] = currentPos[i].z * (1 + pulse);
@@ -222,8 +217,11 @@
                         let openCount = 0;
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
-                        targetRotY = (0.5 - h[9].x) * 4;
-                        targetRotX = (h[9].y - 0.5) * 2;
+                        
+                        // --- 灵敏度微调：降低乘数使旋转更平稳 ---
+                        targetRotY = (0.5 - h[9].x) * 2.5; // 从 4 降至 2.5
+                        targetRotX = (h[9].y - 0.5) * 1.2; // 从 2 降至 1.2
+                        
                         info.innerHTML = "✨ 流金能量已汇聚 | 移动手掌控制视角";
                     } else {
                         info.innerText = "👋 挥挥手，开启 2026 辉煌篇章";
