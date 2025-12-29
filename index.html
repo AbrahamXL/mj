@@ -2,42 +2,40 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 璀璨星幕版</title>
+    <title>2026元旦快乐 - 极致金迷星海版</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
-        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #150d00 0%, #000 100%); }
+        #container { position: relative; width: 100vw; height: 100vh; background: #000; }
         
+        /* 文字容器 - 极致清晰度处理 */
         #title-container {
-            position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 100;
+            position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 1000;
         }
 
         #main-title {
             font-family: 'ZCOOL XiaoWei', serif;
-            font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.1;
-            color: transparent;
-            background-image: linear-gradient(135deg, #FFFFFF 20%, #FFD700 50%, #FFC125 80%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            background-clip: text;
-            filter: drop-shadow(0px 0px 3px rgba(0,0,0,1)) drop-shadow(0px 0px 10px rgba(255, 215, 0, 0.4));
-            animation: artisticShimmer 3s linear infinite alternate;
+            margin: 0; padding: 0 20px; line-height: 1.1; color: transparent;
+            background-image: linear-gradient(135deg, #FFF 10%, #FFD700 40%, #E6C778 70%, #B8860B 100%);
+            background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+            /* 黑色描边 + 金色发光 = 绝对清晰 */
+            filter: drop-shadow(0px 0px 1px rgba(0,0,0,1)) 
+                    drop-shadow(0px 0px 12px rgba(255, 215, 0, 0.6));
+            animation: textShimmer 4s linear infinite alternate;
         }
 
-        #main-title .year { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 7.5rem; display: block; letter-spacing: -2px; }
-        #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -5px; font-weight: bold; }
-        #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 1; margin-top: 15px; }
+        #main-title .year { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 7.5rem; display: block; }
+        #main-title .bless-1 { font-size: 4.2rem; display: block; letter-spacing: 0.2em; margin-top: -5px; font-weight: bold; }
+        #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; margin-top: 15px; color: #FFD700; -webkit-text-fill-color: #FFD700; }
 
-        @keyframes artisticShimmer { 0% { background-position: 0% 50%; filter: brightness(1); } 100% { background-position: 100% 50%; filter: brightness(1.2); } }
+        @keyframes textShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: #FFD700; background: rgba(0,0,0,0.7); 
-            padding: 12px 35px; border-radius: 50px; border: 1px solid #FFD700;
-            backdrop-filter: blur(15px); font-size: 0.9rem; z-index: 100; letter-spacing: 2px;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); font-weight: bold;
+            color: #FFD700; background: rgba(0,0,0,0.8); padding: 12px 35px; border-radius: 50px; 
+            border: 2px solid #FFD700; font-size: 0.9rem; z-index: 100; letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(255,215,0,0.4);
         }
-        
         #video-input { display: none; }
     </style>
 </head>
@@ -51,7 +49,7 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在为您铺设流金星幕...</div>
+        <div id="info-instructions">正在为您编织浪漫金海...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -65,7 +63,7 @@
         let baseSizes = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        const COUNT = 6800; // 再次提升粒子密度
+        const COUNT = 7000; 
         const IMG_COUNT = 10;
 
         function createStarTexture() {
@@ -74,8 +72,8 @@
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
             grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.2, 'rgba(255,255,230,1)'); 
-            grad.addColorStop(0.5, 'rgba(255,215,0,0.8)'); // 核心带金光
+            grad.addColorStop(0.2, 'rgba(255,255,200,1)');
+            grad.addColorStop(0.4, 'rgba(255,215,0,0.7)');
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128);
             return new THREE.CanvasTexture(canvas);
@@ -83,8 +81,8 @@
 
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 3000);
-            camera.position.z = 65;
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 2000);
+            camera.position.z = 70;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -94,16 +92,17 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
+            // 照片环
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
             for(let i=1; i<=IMG_COUNT; i++) {
-                const texture = loader.load(`./mj/${i}.jpg`, undefined, undefined, () => {});
+                const texture = loader.load(`./mj/${i}.jpg`);
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
-                const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
+                const mesh = new THREE.Mesh(new THREE.PlaneGeometry(10, 12.5), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 32, -6, Math.sin(angle) * 32);
-                mesh.lookAt(0, -6, 0); 
+                mesh.position.set(Math.cos(angle) * 35, -5, Math.sin(angle) * 35);
+                mesh.lookAt(0, -5, 0); 
                 imageGroup.add(mesh);
             }
 
@@ -113,46 +112,30 @@
             const sizeArr = new Float32Array(COUNT);
             baseSizes = new Float32Array(COUNT);
             
-            const palette = {
-                bright: new THREE.Color(0xFFFFFF),
-                gold: new THREE.Color(0xFFD700),
-                amber: new THREE.Color(0xFF8C00)
-            };
+            const goldColor = new THREE.Color(0xFFD700);
 
             for(let i=0; i<COUNT; i++) {
-                let vTree = new THREE.Vector3(); // 汇聚时的坐标
-                let vStar = new THREE.Vector3(); // 散开时的背景坐标
-                let c = new THREE.Color();
-                let s = 1.0;
+                // 1. 汇聚形态 (核心光球)
+                const rTree = 10 * Math.cbrt(Math.random());
+                const vTree = new THREE.Vector3().setFromSphericalCoords(rTree, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
                 
-                // --- 1. 设定汇聚时的光球位置 (不变) ---
-                if (i < 2500) { 
-                    const r = 8 * Math.cbrt(Math.random());
-                    vTree.setFromSphericalCoords(r, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
-                    c.lerpColors(palette.gold, palette.bright, 1 - r/8);
-                    s = 0.8 + Math.random() * 0.5;
-                } else {
-                    const angle = Math.random() * Math.PI * 2;
-                    const r = 12 + Math.random() * 15;
-                    vTree.set(r * Math.cos(angle), (Math.random()-0.5)*20, r * Math.sin(angle));
-                    c.copy(palette.gold);
-                    s = 0.6 + Math.random() * 0.8;
-                }
-
-                // --- 2. 设定散开后的“星幕”背景 (关键修改) ---
-                // 不再是乱飞，而是散布在照片后方的一个半球/平面背景
-                const spreadAngle = (Math.random() - 0.5) * Math.PI * 2;
-                const spreadHeight = (Math.random() - 0.5) * 120;
-                const spreadDepth = -40 - Math.random() * 150; // 位于照片后方 40 到 190 的距离
-                vStar.set(Math.sin(spreadAngle) * 150, spreadHeight, spreadDepth);
+                // 2. 散开形态 (浪漫星海幕墙)
+                // 这次我们将星星密集分布在照片后方，形成一层“金色的墙”
+                const vStar = new THREE.Vector3();
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                // 散开后半径很大，形成一个包围圈
+                const rStar = 120 + Math.random() * 50; 
+                vStar.setFromSphericalCoords(rStar, phi, theta);
 
                 treePos.push(vTree);
                 starPos.push(vStar);
                 currentPos.push(vTree.clone());
                 
+                const s = 0.5 + Math.random() * 1.5;
                 baseSizes[i] = s;
                 posArr[i*3] = vTree.x; posArr[i*3+1] = vTree.y; posArr[i*3+2] = vTree.z;
-                colArr[i*3] = c.r; colArr[i*3+1] = c.g; colArr[i*3+2] = c.b;
+                colArr[i*3] = goldColor.r; colArr[i*3+1] = goldColor.g; colArr[i*3+2] = goldColor.b;
                 sizeArr[i] = s;
             }
 
@@ -172,40 +155,36 @@
         function animate() {
             requestAnimationFrame(animate);
             const now = Date.now();
-            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.15);
+            morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.1);
             
-            // 基础自转
-            mainGroup.rotation.y += 0.002;
-            // 响应手势的旋转（散开后旋转更平滑，方便观察背景）
+            mainGroup.rotation.y += 0.003;
             mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY + mainGroup.rotation.y, 0.1);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
             imageGroup.children.forEach((mesh) => {
-                mesh.material.opacity = THREE.MathUtils.lerp(0, 0.9, (morphFactor - 0.2) * 5);
-                mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.1, 0.01, 1.1));
+                // morphFactor > 0.3 开始显现图片
+                mesh.material.opacity = THREE.MathUtils.lerp(0, 1, (morphFactor - 0.2) * 4);
+                mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.2, 0.01, 1));
             });
 
             const posAttr = particleSystem.geometry.attributes.position;
             const sizeAttr = particleSystem.geometry.attributes.size;
 
             for(let i=0; i<COUNT; i++) {
-                // 插值移动
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 
-                // --- 背景繁星的浪漫动态逻辑 ---
-                // 1. 闪烁：散开后闪烁更明显
-                let twinkleFreq = 0.001 + (i % 5) * 0.0005;
-                let twinkle = 0.6 + Math.sin(now * twinkleFreq + i) * 0.4;
+                // 散开后的“浪漫闪烁”逻辑
+                // 散开后星星变大，闪烁频率降低，制造缓慢的呼吸感
+                let twinkle = 0.7 + Math.sin(now * 0.001 + i) * 0.3;
                 
-                // 2. 尺寸爆炸：当 morphFactor 变大，背景星星剧烈膨胀
-                // 使用指数函数，让散开后的星星大而醒目
-                let scatterScale = 1 + Math.pow(morphFactor, 3) * 15; 
-                
+                // --- 散开尺寸膨胀 (Scatter Expansion) ---
+                // 当手张开时 (morphFactor -> 1)，基础尺寸大幅度翻倍，形成明显的背景光斑
+                let scatterScale = 1 + (morphFactor * 10.0); 
+
                 posAttr.array[i*3] = currentPos[i].x;
                 posAttr.array[i*3+1] = currentPos[i].y;
                 posAttr.array[i*3+2] = currentPos[i].z;
 
-                // 最终尺寸 = 原始尺寸 * 闪烁 * 散开膨胀
                 sizeAttr.array[i] = baseSizes[i] * scatterScale * twinkle;
             }
             posAttr.needsUpdate = true;
@@ -226,10 +205,9 @@
                         let openCount = 0;
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
-                        // 左右移动控制星空旋转
-                        targetRotY = (0.5 - h[9].x) * 3;
-                        targetRotX = (h[9].y - 0.5) * 1.5;
-                        info.innerHTML = morphFactor > 0.6 ? "✨ 星幕已为您铺开 | 移动手掌旋转" : "✊ 握拳凝聚，🖐️ 张开释放灿烂星空";
+                        targetRotY = (0.5 - h[9].x) * 4;
+                        targetRotX = (h[9].y - 0.5) * 2;
+                        info.innerHTML = morphFactor > 0.5 ? "✨ 沉浸于浪漫星海" : "✊ 握拳汇聚，🖐️ 张开展示 2026 璀璨背景";
                     } else {
                         info.innerText = "👋 挥挥手，开启 2026 辉煌篇章";
                     }
