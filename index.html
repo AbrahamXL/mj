@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 交互影像装置</title>
+    <title>2026元旦快乐 - 时光光球版</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
-        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); }
+        /* 背景调整为更深邃的宇宙感 */
+        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0d0d1a 0%, #000 100%); }
         
-        /* 文字容器设计 - 移至中上方 */
         #title-container {
             position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
         }
@@ -19,41 +19,38 @@
             color: transparent;
             background-image: linear-gradient(
                 135deg,
-                #FFF5E1 0%,    /* 珍珠白 */
-                #FFD1DC 20%,   /* 玫瑰粉 */
-                #E6C778 50%,   /* 香槟金 */
-                #B0E0E6 80%,   /* 文气青蓝 */
-                #C0A060 100%
+                #FFFFFF 0%,    /* 纯白亮光 */
+                #FFE4B5 30%,   /* 香槟光 */
+                #FFD700 60%,   /* 璀璨金 */
+                #E0FFFF 100%   /* 未来感冷光 */
             );
             background-size: 200% auto;
             -webkit-background-clip: text;
             background-clip: text;
             text-shadow: 
-                0px 2px 3px rgba(255,255,255,0.3),
-                0px 10px 30px rgba(230, 199, 120, 0.2);
-            animation: artisticShimmer 6s linear infinite alternate;
+                0px 0px 10px rgba(255,255,255,0.5),
+                0px 0px 30px rgba(255, 215, 0, 0.3);
+            animation: artisticShimmer 4s linear infinite alternate;
         }
 
-        /* 2026 样式 */
         #main-title .year {
             font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900;
-            font-size: 7rem; display: block; filter: brightness(1.2);
+            font-size: 7rem; display: block; filter: brightness(1.3);
         }
 
-        /* 祝福语 样式 */
         #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -10px; }
         #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 0.9; margin-top: 10px; }
 
         @keyframes artisticShimmer {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 100% 50%; }
+            0% { background-position: 0% 50%; filter: brightness(1); }
+            100% { background-position: 100% 50%; filter: brightness(1.2); }
         }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); 
-            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(230,199,120,0.2);
-            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
+            color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.05); 
+            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.3);
+            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px; box-shadow: 0 0 20px rgba(255,215,0,0.1);
         }
         
         #video-input { display: none; }
@@ -69,7 +66,7 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在启动 2026 祝福装置...</div>
+        <div id="info-instructions">正在汇聚新年能量...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -82,7 +79,7 @@
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        const COUNT = 6000; // 略微增加粒子数
+        const COUNT = 6500; // 增加粒子以获得更密集的球体效果
         const IMG_COUNT = 10;
 
         function createStarTexture() {
@@ -90,8 +87,10 @@
             canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            // 更亮、更锐利的光点核心
             grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.3, 'rgba(255,230,150,0.8)'); // 偏金色的光晕
+            grad.addColorStop(0.1, 'rgba(255,240,200,0.9)');
+            grad.addColorStop(0.4, 'rgba(255,220,100,0.3)');
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
@@ -110,7 +109,7 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // 照片环
+            // 照片环 (位置稍微下移，围绕光球底部)
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
@@ -119,76 +118,71 @@
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 28, -2, Math.sin(angle) * 28);
-                mesh.lookAt(0, -2, 0); 
+                mesh.position.set(Math.cos(angle) * 28, -5, Math.sin(angle) * 28);
+                mesh.lookAt(0, -5, 0); 
                 imageGroup.add(mesh);
             }
 
-            // --- 重新设计的“红绒流金”蛋糕逻辑 ---
+            // --- 全新设计的：时光能量光球 (Sphere of Time & Light) ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
             
-            // 颜色定义
+            // 新年能量配色
             const colors = {
-                velvet: new THREE.Color(0x800000), // 深红丝绒
-                gold: new THREE.Color(0xFFD700),   // 明亮金
-                cream: new THREE.Color(0xFFFDD0),  // 奶油白
-                flame: new THREE.Color(0xFF8C00)   // 橙火
+                coreBright: new THREE.Color(0xFFFFFF),  // 核心亮白
+                coreGold: new THREE.Color(0xFFD700),    // 核心金
+                orbitChampagne: new THREE.Color(0xFFE4B5), // 轨道香槟
+                orbitBlue: new THREE.Color(0xE0FFFF)    // 轨道未来蓝光
             };
-
-            const tiers = [
-                { r: 13, h: 6, y: -14 }, // 底层
-                { r: 9, h: 5, y: -8 },  // 中层
-                { r: 5, h: 4, y: -3 }   // 顶层
-            ];
 
             for(let i=0; i<COUNT; i++) {
                 let v = new THREE.Vector3();
                 let c = new THREE.Color();
-                let angle = Math.random() * Math.PI * 2;
-
-                if (i < 1200) { 
-                    // 1. 金色流沙效果 (中层边缘)
-                    const t = tiers[1];
-                    const drip = Math.random() * Math.random() * 4; // 随机流淌长度
-                    const r = t.r * 1.05;
-                    v.set(r * Math.cos(angle), t.y + t.h - drip, r * Math.sin(angle));
-                    c.copy(colors.gold).lerp(colors.velvet, 0.2);
+                
+                // 将粒子分为几个结构组
+                if (i < 2500) { 
+                    // === 1. 核心能量团 (Dense Inner Core) ===
+                    // 使用球体随机分布
+                    const radius = 7 * Math.cbrt(Math.random()); // 越靠近中心越密集
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    v.setFromSphericalCoords(radius, phi, theta);
+                    
+                    // 中心极亮，向外变金
+                    c.copy(colors.coreGold).lerp(colors.coreBright, 1 - radius/7);
                 } 
-                else if (i < 2000) {
-                    // 2. 底部金色珍珠围边 (底层基座)
-                    const t = tiers[0];
-                    const r = t.r * 1.08;
-                    const pAngle = (Math.floor(i/30) * 0.2); // 形成颗粒感
-                    v.set(r * Math.cos(pAngle), t.y, r * Math.sin(pAngle));
-                    c.copy(colors.gold);
-                }
-                else if (i < 2600) {
-                    // 3. 顶端跳动圣火
-                    const t = tiers[2];
-                    const r = Math.random() * 1.2 * (1 - Math.random());
-                    const h = Math.random() * 6;
-                    v.set(r * Math.cos(angle), t.y + t.h + h, r * Math.sin(angle));
-                    // 火焰渐变色
-                    c.copy(colors.gold).lerp(colors.flame, h/6);
+                else if (i < 5000) {
+                    // === 2. 交错的时空轨道 (Intertwined Orbits) ===
+                    const orbitIdx = (i - 2500) % 3; // 分为3条主轨道
+                    const angle = (i / 2500) * Math.PI * 2 * (5 + orbitIdx); // 增加缠绕圈数
+                    const baseRadius = 12 + orbitIdx * 2;
+                    
+                    // 基础环形坐标
+                    v.set(baseRadius * Math.cos(angle), 0, baseRadius * Math.sin(angle));
+                    
+                    // 关键：对不同轨道进行不同轴向的旋转，形成交错感
+                    const tiltAxis = new THREE.Vector3(Math.cos(orbitIdx), Math.sin(orbitIdx), Math.cos(orbitIdx*2)).normalize();
+                    v.applyAxisAngle(tiltAxis, Math.PI / (3 + orbitIdx));
+                    
+                    // 增加一点轨道厚度的随机性
+                    v.addScaledVector(new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5), 1.5);
+
+                    // 轨道颜色渐变
+                    c.lerpColors(colors.orbitChampagne, colors.orbitBlue, orbitIdx / 2);
                 }
                 else {
-                    // 4. 蛋糕主体填充
-                    let t;
-                    if (i < 4500) t = tiers[0];
-                    else if (i < 5500) t = tiers[1];
-                    else t = tiers[2];
-
-                    const r = Math.random() * t.r;
-                    v.set(r * Math.cos(angle), t.y + Math.random() * t.h, r * Math.sin(angle));
-                    
-                    // 表面深红，内部偏暗，模拟质感
-                    c.copy(colors.velvet).multiplyScalar(0.7 + (r/t.r)*0.3);
+                    // === 3. 外围氛围光晕 (Ambient Aura) ===
+                    const radius = 18 + Math.random() * 10;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    v.setFromSphericalCoords(radius, phi, theta);
+                    c.copy(colors.orbitChampagne).multiplyScalar(0.6); // 较暗淡
                 }
 
                 treePos.push(v.clone());
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(45 + Math.random()*25, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                // 星空散开位置
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(50 + Math.random()*40, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(v.clone());
                 
                 posArr[i*3] = v.x; posArr[i*3+1] = v.y; posArr[i*3+2] = v.z;
@@ -198,8 +192,9 @@
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
 
+            // 使用较小的粒子尺寸，突出精致感和光感
             particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 0.9, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
+                size: 0.7, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
                 vertexColors: true, depthWrite: false, sizeAttenuation: true 
             }));
             mainGroup.add(particleSystem);
@@ -212,8 +207,10 @@
             const now = Date.now();
             morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.2);
             
-            mainGroup.rotation.y += 0.003;
-            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY, 0.1);
+            // 整体缓慢自转
+            mainGroup.rotation.y += 0.002;
+            // 手势控制的额外旋转
+            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY + mainGroup.rotation.y, 0.1);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
             imageGroup.children.forEach((mesh) => {
@@ -225,13 +222,14 @@
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 
-                // 仅在聚合状态下添加细微的动态抖动
-                let noise = Math.sin(now * 0.002 + i) * 0.03;
-                if (i >= 2000 && i < 2600) noise = Math.sin(now * 0.008 + i) * 0.15; // 火苗抖动更剧烈
+                // 动态呼吸效果：核心和轨道有不同的律动
+                let pulse = 0;
+                if (i < 2500) pulse = Math.sin(now * 0.003) * 0.03 * currentPos[i].length(); // 核心整体缩放呼吸
+                else pulse = Math.sin(now * 0.002 + i) * 0.1; // 轨道粒子独立闪烁
 
-                posAttr.array[i*3] = currentPos[i].x;
-                posAttr.array[i*3+1] = currentPos[i].y + noise;
-                posAttr.array[i*3+2] = currentPos[i].z;
+                posAttr.array[i*3] = currentPos[i].x * (1 + pulse*0.1);
+                posAttr.array[i*3+1] = currentPos[i].y * (1 + pulse*0.1);
+                posAttr.array[i*3+2] = currentPos[i].z * (1 + pulse*0.1);
             }
             posAttr.needsUpdate = true;
             renderer.render(scene, camera);
@@ -250,11 +248,12 @@
                         let openCount = 0;
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
-                        targetRotY = (0.5 - h[9].x) * 6;
-                        targetRotX = (h[9].y - 0.5) * 3;
-                        info.innerHTML = "✨ 新年光环已开启 | 移动手掌控制视角";
+                        // 调整手势灵敏度
+                        targetRotY = (0.5 - h[9].x) * 4;
+                        targetRotX = (h[9].y - 0.5) * 2;
+                        info.innerHTML = "✨ 记忆星河已开启 | 移动手掌控制视角";
                     } else {
-                        info.innerText = "👋 挥挥手开启 2026 祝福";
+                        info.innerText = "👋 挥挥手，释放新年能量";
                     }
                 });
 
