@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 极致浪漫星海版</title>
+    <title>2026元旦快乐 - 终极璀璨星海版</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
-        /* 背景更深，对比度更高 */
-        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0f0800 0%, #000 100%); }
+        /* 背景极深，最大化对比度 */
+        #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #080500 0%, #000 100%); }
         
         #title-container {
             position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 100;
@@ -17,26 +17,28 @@
             font-family: 'ZCOOL XiaoWei', serif;
             font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.1;
             color: transparent;
-            background-image: linear-gradient(135deg, #FFFFFF 0%, #FFD700 40%, #E6C778 70%, #B8860B 100%);
+            /* 使用最高亮的白金渐变组合 */
+            background-image: linear-gradient(135deg, #FFFFFF 20%, #FFD700 50%, #FFC125 80%);
             background-size: 200% auto;
             -webkit-background-clip: text;
             background-clip: text;
-            filter: drop-shadow(0px 0px 2px rgba(0,0,0,1)) drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.4));
-            animation: artisticShimmer 4s linear infinite alternate;
+            /* 强力描边确保文字在任何背景下都清晰 */
+            filter: drop-shadow(0px 0px 3px rgba(0,0,0,1)) drop-shadow(0px 0px 10px rgba(255, 255, 200, 0.6));
+            animation: artisticShimmer 3s linear infinite alternate;
         }
 
         #main-title .year { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900; font-size: 7.5rem; display: block; letter-spacing: -2px; }
         #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -5px; font-weight: bold; }
         #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 1; margin-top: 15px; }
 
-        @keyframes artisticShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        @keyframes artisticShimmer { 0% { background-position: 0% 50%; filter: brightness(1); } 100% { background-position: 100% 50%; filter: brightness(1.3); } }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.6); 
-            padding: 12px 35px; border-radius: 50px; border: 1px solid #FFD700;
-            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+            color: rgba(255,255,255,1); background: rgba(0,0,0,0.7); 
+            padding: 12px 35px; border-radius: 50px; border: 2px solid #FFD700;
+            backdrop-filter: blur(15px); font-size: 0.9rem; z-index: 100; letter-spacing: 2px;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.4); font-weight: bold;
         }
         
         #video-input { display: none; }
@@ -52,7 +54,7 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在汇聚极致星海...</div>
+        <div id="info-instructions">正在汇聚璀璨星海...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -69,15 +71,18 @@
         const COUNT = 6500;
         const IMG_COUNT = 10;
 
-        // 纹理优化：核心更亮，边缘更柔和，适合大光斑
+        // --- 纹理重绘：核心更实、更亮，边缘更锐利 ---
         function createStarTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128; // 提高纹理分辨率
+            canvas.width = 128; canvas.height = 128;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-            grad.addColorStop(0, 'rgba(255,255,255,1)');     // 极亮核心
-            grad.addColorStop(0.1, 'rgba(255,245,200,0.9)'); // 暖白过渡
-            grad.addColorStop(0.4, 'rgba(255,220,120,0.3)'); // 金色柔焦
+            // 核心 30% 区域是纯实心白光，确保足够亮
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.3, 'rgba(255,255,240,1)'); 
+            // 中间过渡到高亮金
+            grad.addColorStop(0.5, 'rgba(255,220,100,0.9)');
+            // 快速衰减到透明，形成清晰的光斑边界
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128);
             return new THREE.CanvasTexture(canvas);
@@ -85,7 +90,7 @@
 
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 2000); // 增加远裁剪面
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 3000); // 增加视距
             camera.position.z = 65;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -118,7 +123,7 @@
             const palette = {
                 bright: new THREE.Color(0xFFFFFF),
                 gold: new THREE.Color(0xFFD700),
-                amber: new THREE.Color(0xFFBF00)
+                amber: new THREE.Color(0xFFC000) // 更暖的金
             };
 
             for(let i=0; i<COUNT; i++) {
@@ -142,18 +147,18 @@
                     c.lerpColors(palette.amber, palette.gold, (Math.sin(angle)+1)/2);
                     s = 0.9 + Math.random() * 0.6;
                 }
-                else { // 外围星尘 - 关键调整
-                    // 增大分布范围
+                else { // 外围星尘
                     const r = 25 + Math.random() * 30;
                     v.setFromSphericalCoords(r, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
-                    c.copy(palette.gold).multiplyScalar(0.7);
-                    // 制造巨大的尺寸差异，形成景深感。使用三次方让大粒子少而精。
-                    s = 0.6 + Math.pow(Math.random(), 3) * 4.0; 
+                    // 颜色调得更亮
+                    c.copy(palette.gold).lerp(palette.bright, 0.3);
+                    // 基础大小差异更大
+                    s = 0.7 + Math.pow(Math.random(), 2) * 5.0; 
                 }
 
                 treePos.push(v.clone());
                 // 散开范围极大
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(100 + Math.random()*150, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(120 + Math.random()*180, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(v.clone());
                 baseSizes[i] = s;
                 
@@ -170,6 +175,7 @@
                 size: 1.0,
                 map: createStarTexture(), 
                 transparent: true, 
+                // 使用 AdditiveBlending 让叠加的星星极亮
                 blending: THREE.AdditiveBlending, 
                 vertexColors: true, 
                 depthWrite: false, 
@@ -190,7 +196,7 @@
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
             imageGroup.children.forEach((mesh) => {
-                mesh.material.opacity = THREE.MathUtils.lerp(0, 0.8, (morphFactor - 0.2) * 5);
+                mesh.material.opacity = THREE.MathUtils.lerp(0, 0.85, (morphFactor - 0.2) * 5); // 照片稍微更亮一点
                 mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.1, 0.01, 1.1));
             });
 
@@ -200,25 +206,27 @@
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 
-                // 1. 形态呼吸 (光球状态下)
                 let formPulse = Math.sin(now * 0.002 + (i % 100)) * 0.05 * (1-morphFactor);
                 
-                // 2. 浪漫呼吸闪烁 (Romantic Breathing Twinkle)
-                // 使用更慢、更深的呼吸曲线
-                let breath = (Math.sin(now * 0.0008 + i * 0.05) + 1) / 2; // 0到1的缓慢变化
-                // 散开后，亮度范围 dramatically 增加，最高可达基础亮度的2倍以上
-                let brightnessRange = 0.5 + morphFactor * 1.5; 
-                let twinkle = 0.5 + breath * brightnessRange;
+                // --- 核心修改：高能呼吸闪烁 ---
+                // 呼吸速度随散开加快
+                let breathSpeed = 0.0008 + morphFactor * 0.0015;
+                let breath = (Math.sin(now * breathSpeed + i * 0.1) + 1) / 2;
+                
+                // 亮度范围：散开后，最低亮度提高，最高亮度极大提高 (最高可达 2.5倍亮度)
+                let minBright = 0.4 + morphFactor * 0.4;
+                let maxBrightRange = 0.6 + morphFactor * 1.5;
+                let twinkle = minBright + breath * maxBrightRange;
 
-                // 3. 散开后的尺寸指数级放大 (Exponential Size Boost)
-                // 使用 pow 让散开后期的放大效果极具张力，最大约 5 倍
-                let scatterBoost = 1 + Math.pow(morphFactor, 2) * 4.0;
+                // --- 核心修改：指数级尺寸爆炸 ---
+                // 使用 4 次幂，让散开最后阶段的放大极其剧烈 (最大放大约 13 倍)
+                let scatterBoost = 1 + Math.pow(morphFactor, 4) * 12.0;
 
                 posAttr.array[i*3] = currentPos[i].x * (1 + formPulse);
                 posAttr.array[i*3+1] = currentPos[i].y * (1 + formPulse);
                 posAttr.array[i*3+2] = currentPos[i].z * (1 + formPulse);
 
-                // 最终尺寸 = 基础大小 * 散开放大 * 呼吸闪烁
+                // 最终尺寸计算
                 sizeAttr.array[i] = baseSizes[i] * scatterBoost * twinkle;
             }
             posAttr.needsUpdate = true;
@@ -241,7 +249,7 @@
                         targetMorph = openCount / 4;
                         targetRotY = (0.5 - h[9].x) * 4;
                         targetRotX = (h[9].y - 0.5) * 2;
-                        info.innerHTML = morphFactor > 0.5 ? "✨ 沉浸于浪漫星海 | 移动手掌" : "✊ 握拳汇聚，🖐️ 张开释放星海";
+                        info.innerHTML = morphFactor > 0.5 ? "✨ 沉浸于璀璨星海 | 移动手掌" : "✊ 握拳汇聚，🖐️ 张开释放星海";
                     } else {
                         info.innerText = "👋 挥挥手，开启 2026 辉煌篇章";
                     }
