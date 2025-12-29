@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 时光光球版</title>
+    <title>2026元旦快乐 - 全彩能量球</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
@@ -13,24 +13,26 @@
             position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
         }
 
+        /* 配合新的多彩光球，文字的渐变也变得更丰富、带有全息感 */
         #main-title {
             font-family: 'ZCOOL XiaoWei', serif;
             font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.2;
             color: transparent;
             background-image: linear-gradient(
                 135deg,
-                #FFFFFF 0%,    /* 纯白亮光 */
-                #FFE4B5 30%,   /* 香槟光 */
-                #FFD700 60%,   /* 璀璨金 */
-                #E0FFFF 100%   /* 未来感冷光 */
+                #FFFFFF 0%,    /* 纯白 */
+                #FFD700 25%,   /* 黄金 */
+                #FF69B4 50%,   /* 热粉 */
+                #00FFFF 75%,   /* 青光 */
+                #9370DB 100%   /* 紫罗兰 */
             );
-            background-size: 200% auto;
+            background-size: 300% auto; /* 拉大背景让渐变更平滑 */
             -webkit-background-clip: text;
             background-clip: text;
             text-shadow: 
                 0px 0px 10px rgba(255,255,255,0.5),
-                0px 0px 30px rgba(255, 215, 0, 0.3);
-            animation: artisticShimmer 4s linear infinite alternate;
+                0px 0px 30px rgba(255, 100, 255, 0.3); /* 增加一点紫粉色光晕 */
+            animation: artisticShimmer 5s linear infinite alternate;
         }
 
         #main-title .year {
@@ -49,8 +51,8 @@
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.05); 
-            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.3);
-            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px; box-shadow: 0 0 20px rgba(255,215,0,0.1);
+            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px; box-shadow: 0 0 20px rgba(255,255,255,0.1);
         }
         
         #video-input { display: none; }
@@ -66,7 +68,7 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在汇聚新年能量...</div>
+        <div id="info-instructions">正在汇聚全彩能量...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -79,7 +81,7 @@
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        const COUNT = 6500; // 增加粒子以获得更密集的球体效果
+        const COUNT = 7000; // 再次增加粒子数，让色彩过渡更细腻
         const IMG_COUNT = 10;
 
         function createStarTexture() {
@@ -87,10 +89,10 @@
             canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            // 更亮、更锐利的光点核心
+            // 使用更纯净的白光核心，让叠加色更鲜艳
             grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.1, 'rgba(255,240,200,0.9)');
-            grad.addColorStop(0.4, 'rgba(255,220,100,0.3)');
+            grad.addColorStop(0.1, 'rgba(255,255,255,0.8)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
@@ -109,7 +111,7 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // 照片环 (位置稍微下移，围绕光球底部)
+            // 照片环
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
@@ -118,71 +120,80 @@
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 28, -5, Math.sin(angle) * 28);
-                mesh.lookAt(0, -5, 0); 
+                mesh.position.set(Math.cos(angle) * 28, -6, Math.sin(angle) * 28); // 稍微再下移一点
+                mesh.lookAt(0, -6, 0); 
                 imageGroup.add(mesh);
             }
 
-            // --- 全新设计的：时光能量光球 (Sphere of Time & Light) ---
+            // --- 全新设计的：全光谱能量光球 ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
             
-            // 新年能量配色
-            const colors = {
-                coreBright: new THREE.Color(0xFFFFFF),  // 核心亮白
-                coreGold: new THREE.Color(0xFFD700),    // 核心金
-                orbitChampagne: new THREE.Color(0xFFE4B5), // 轨道香槟
-                orbitBlue: new THREE.Color(0xE0FFFF)    // 轨道未来蓝光
+            // 定义丰富的色彩盘
+            const palette = {
+                white: new THREE.Color(0xFFFFFF),
+                gold: new THREE.Color(0xFFD700),
+                orange: new THREE.Color(0xFF4500), // 热橙
+                pink: new THREE.Color(0xFF1493),   // 深粉
+                purple: new THREE.Color(0x9400D3), // 紫罗兰
+                blue: new THREE.Color(0x00BFFF),   // 深天蓝
+                cyan: new THREE.Color(0x00FFFF),   // 青色
+                green: new THREE.Color(0x00FF7F)   // 春绿
             };
+
+            const coreLimit = 2800;
+            const orbitLimit = 5800;
 
             for(let i=0; i<COUNT; i++) {
                 let v = new THREE.Vector3();
                 let c = new THREE.Color();
                 
-                // 将粒子分为几个结构组
-                if (i < 2500) { 
-                    // === 1. 核心能量团 (Dense Inner Core) ===
-                    // 使用球体随机分布
-                    const radius = 7 * Math.cbrt(Math.random()); // 越靠近中心越密集
+                if (i < coreLimit) { 
+                    // === 1. 炽热光谱核心 (Hot Spectrum Core) ===
+                    const radius = 7.5 * Math.cbrt(Math.random());
                     const theta = Math.random() * Math.PI * 2;
                     const phi = Math.acos(2 * Math.random() - 1);
                     v.setFromSphericalCoords(radius, phi, theta);
                     
-                    // 中心极亮，向外变金
-                    c.copy(colors.coreGold).lerp(colors.coreBright, 1 - radius/7);
+                    // 中心白 -> 中间金 -> 边缘橙红/玫粉
+                    const t = radius / 7.5;
+                    if (t < 0.3) c.copy(palette.white);
+                    else if (t < 0.7) c.lerpColors(palette.gold, palette.orange, (t-0.3)/0.4);
+                    else c.lerpColors(palette.orange, palette.pink, (t-0.7)/0.3);
                 } 
-                else if (i < 5000) {
-                    // === 2. 交错的时空轨道 (Intertwined Orbits) ===
-                    const orbitIdx = (i - 2500) % 3; // 分为3条主轨道
-                    const angle = (i / 2500) * Math.PI * 2 * (5 + orbitIdx); // 增加缠绕圈数
-                    const baseRadius = 12 + orbitIdx * 2;
+                else if (i < orbitLimit) {
+                    // === 2. 霓虹渐变轨道 (Neon Gradient Orbits) ===
+                    const orbitIdx = (i - coreLimit) % 3;
+                    const angle = (i / coreLimit) * Math.PI * 2 * (6 + orbitIdx);
+                    const baseRadius = 12.5 + orbitIdx * 2.5;
                     
-                    // 基础环形坐标
                     v.set(baseRadius * Math.cos(angle), 0, baseRadius * Math.sin(angle));
-                    
-                    // 关键：对不同轨道进行不同轴向的旋转，形成交错感
-                    const tiltAxis = new THREE.Vector3(Math.cos(orbitIdx), Math.sin(orbitIdx), Math.cos(orbitIdx*2)).normalize();
-                    v.applyAxisAngle(tiltAxis, Math.PI / (3 + orbitIdx));
-                    
-                    // 增加一点轨道厚度的随机性
-                    v.addScaledVector(new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5), 1.5);
+                    const tiltAxis = new THREE.Vector3(Math.cos(orbitIdx*1.5), Math.sin(orbitIdx), Math.cos(orbitIdx)).normalize();
+                    v.applyAxisAngle(tiltAxis, Math.PI / (2.5 + orbitIdx*0.5));
+                    v.addScaledVector(new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5), 1.2);
 
-                    // 轨道颜色渐变
-                    c.lerpColors(colors.orbitChampagne, colors.orbitBlue, orbitIdx / 2);
+                    // 沿轨道进行色彩渐变 (使用 sin(angle) 实现平滑循环)
+                    const gradientPos = (Math.sin(angle * 1.5) + 1) / 2; 
+                    if (orbitIdx === 0) c.lerpColors(palette.cyan, palette.purple, gradientPos); // 青紫轨道
+                    else if (orbitIdx === 1) c.lerpColors(palette.pink, palette.gold, gradientPos); // 粉金轨道
+                    else c.lerpColors(palette.blue, palette.green, gradientPos); // 蓝绿轨道
                 }
                 else {
-                    // === 3. 外围氛围光晕 (Ambient Aura) ===
-                    const radius = 18 + Math.random() * 10;
+                    // === 3. 多彩星尘光晕 (Colorful Stardust Aura) ===
+                    const radius = 19 + Math.random() * 12;
                     const theta = Math.random() * Math.PI * 2;
                     const phi = Math.acos(2 * Math.random() - 1);
                     v.setFromSphericalCoords(radius, phi, theta);
-                    c.copy(colors.orbitChampagne).multiplyScalar(0.6); // 较暗淡
+                    
+                    // 随机从色盘中选取一种颜色
+                    const colorKeys = Object.keys(palette);
+                    const randomKey = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+                    c.copy(palette[randomKey]).multiplyScalar(0.5); // 稍微暗一点
                 }
 
                 treePos.push(v.clone());
-                // 星空散开位置
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(50 + Math.random()*40, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(55 + Math.random()*45, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(v.clone());
                 
                 posArr[i*3] = v.x; posArr[i*3+1] = v.y; posArr[i*3+2] = v.z;
@@ -192,9 +203,9 @@
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
 
-            // 使用较小的粒子尺寸，突出精致感和光感
+            // 使用 AdditiveBlending 混合模式，让多彩粒子叠加后更亮、更迷幻
             particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 0.7, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
+                size: 0.75, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
                 vertexColors: true, depthWrite: false, sizeAttenuation: true 
             }));
             mainGroup.add(particleSystem);
@@ -207,10 +218,9 @@
             const now = Date.now();
             morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.2);
             
-            // 整体缓慢自转
-            mainGroup.rotation.y += 0.002;
-            // 手势控制的额外旋转
-            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY + mainGroup.rotation.y, 0.1);
+            // 自转与交互旋转
+            mainGroup.rotation.y += 0.0025;
+            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY + mainGroup.rotation.y * 0.5, 0.1);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
             imageGroup.children.forEach((mesh) => {
@@ -222,10 +232,11 @@
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
                 
-                // 动态呼吸效果：核心和轨道有不同的律动
+                // 动态呼吸效果
                 let pulse = 0;
-                if (i < 2500) pulse = Math.sin(now * 0.003) * 0.03 * currentPos[i].length(); // 核心整体缩放呼吸
-                else pulse = Math.sin(now * 0.002 + i) * 0.1; // 轨道粒子独立闪烁
+                // 核心和轨道有不同的律动频率
+                if (i < 2800) pulse = Math.sin(now * 0.002) * 0.03 * currentPos[i].length(); 
+                else pulse = Math.sin(now * 0.003 + i) * 0.08; 
 
                 posAttr.array[i*3] = currentPos[i].x * (1 + pulse*0.1);
                 posAttr.array[i*3+1] = currentPos[i].y * (1 + pulse*0.1);
@@ -248,12 +259,11 @@
                         let openCount = 0;
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
-                        // 调整手势灵敏度
                         targetRotY = (0.5 - h[9].x) * 4;
                         targetRotX = (h[9].y - 0.5) * 2;
-                        info.innerHTML = "✨ 记忆星河已开启 | 移动手掌控制视角";
+                        info.innerHTML = "✨ 全彩星河已开启 | 移动手掌控制视角";
                     } else {
-                        info.innerText = "👋 挥挥手，释放新年能量";
+                        info.innerText = "👋 挥挥手，释放新年色彩";
                     }
                 });
 
