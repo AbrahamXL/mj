@@ -2,61 +2,55 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐 - 奢华流金清晰版</title>
+    <title>2026元旦快乐 - 流金能量球版</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
-        /* 背景采用深邃的黑金渐变，衬托主体 */
         #container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a1100 0%, #000 100%); }
         
-        /* 文字容器 - 位置稍微上移，确保不被蛋糕遮挡 */
+        /* 文字容器 - 确保最高层级，位置醒目 */
         #title-container {
-            position: absolute; top: 8%; width: 100%; text-align: center; pointer-events: none; z-index: 10;
+            position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; z-index: 100;
         }
 
-        /* --- 核心修改：极致清晰的金色艺术字 --- */
+        /* --- 极致清晰的金色字设计 --- */
         #main-title {
             font-family: 'ZCOOL XiaoWei', serif;
-            font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.2;
+            font-weight: normal; margin: 0; padding: 0 20px; line-height: 1.1;
             color: transparent;
-            /* 纯粹的高亮金色渐变，确保最高清晰度 */
             background-image: linear-gradient(
                 135deg,
-                #FFFFFF 0%,    /* 钻石白高光 (提高可读性) */
-                #FFD700 30%,   /* 纯正黄金 */
-                #FDB931 60%,   /* 暖金 */
-                #C08F28 100%   /* 深沉暗金 (增加立体感) */
+                #FFFFFF 0%,    /* 钻白光中心 */
+                #FFD700 40%,   /* 纯金 */
+                #E6C778 70%,   /* 香槟金 */
+                #B8860B 100%   /* 暗金边缘 */
             );
             background-size: 200% auto;
             -webkit-background-clip: text;
             background-clip: text;
-            /* 增强的金色光晕，让文字与背景分离 */
-            text-shadow: 
-                0px 2px 5px rgba(255, 215, 0, 0.5),
-                0px 5px 30px rgba(255, 140, 0, 0.3);
-            animation: artisticShimmer 5s linear infinite alternate;
+            /* 强化描边与投影，确保在任何粒子背景下文字都清晰 */
+            filter: drop-shadow(0px 0px 2px rgba(0,0,0,1)) 
+                    drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.4));
+            animation: artisticShimmer 4s linear infinite alternate;
         }
 
-        /* 2026 数字样式 */
         #main-title .year {
             font-family: 'Playfair Display', serif; font-style: italic; font-weight: 900;
-            font-size: 7rem; display: block; 
-            filter: brightness(1.1); /* 让数字最亮 */
+            font-size: 7.5rem; display: block; letter-spacing: -2px;
         }
 
-        /* 祝福语样式 - 确保足够大且清晰 */
-        #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -10px; }
-        #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 0.95; margin-top: 10px; }
+        #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -5px; font-weight: bold; }
+        #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 1; margin-top: 15px; }
 
         @keyframes artisticShimmer {
-            0% { background-position: 0% 50%; filter: brightness(1); }
-            100% { background-position: 100% 50%; filter: brightness(1.15); }
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
         }
 
         #info-instructions {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            color: rgba(255,255,255,0.7); background: rgba(255,215,0,0.05); 
-            padding: 12px 35px; border-radius: 50px; border: 1px solid rgba(255,215,0,0.3);
+            color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.5); 
+            padding: 12px 35px; border-radius: 50px; border: 1px solid #FFD700;
             backdrop-filter: blur(15px); font-size: 0.8rem; z-index: 100; letter-spacing: 2px;
         }
         
@@ -73,7 +67,7 @@
     </div>
 
     <div id="container">
-        <div id="info-instructions">正在铸造流金岁月...</div>
+        <div id="info-instructions">正在汇聚流金能量...</div>
         <video id="video-input" playsinline></video>
     </div>
 
@@ -86,18 +80,16 @@
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        const COUNT = 5800; 
+        const COUNT = 6500;
         const IMG_COUNT = 10;
 
-        // 纹理调整为更暖的金色光晕
         function createStarTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            grad.addColorStop(0, 'rgba(255,255,240,1)');
-            grad.addColorStop(0.2, 'rgba(255,220,130,0.9)'); // 更暖的金
-            grad.addColorStop(0.5, 'rgba(200,120,50,0.4)');
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.2, 'rgba(255,230,150,0.8)');
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
             return new THREE.CanvasTexture(canvas);
@@ -116,7 +108,7 @@
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
 
-            // 照片环 (位置下移)
+            // 照片环
             imageGroup = new THREE.Group();
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
@@ -125,90 +117,64 @@
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 28, -5, Math.sin(angle) * 28);
+                mesh.position.set(Math.cos(angle) * 30, -5, Math.sin(angle) * 30);
                 mesh.lookAt(0, -5, 0); 
                 imageGroup.add(mesh);
             }
 
-            // --- 回归：奢华流金蛋糕结构 ---
+            // --- 核心设计：流金星云光球 (Golden Nebula Sphere) ---
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(COUNT * 3);
             const colArr = new Float32Array(COUNT * 3);
-            const sizeArr = new Float32Array(COUNT);
             
-            const tiers = [{ r: 13, h: 6, y: -14 }, { r: 9, h: 5, y: -8 }, { r: 5.5, h: 4, y: -3 }];
-            
-            // 全金色系配色盘
             const palette = {
-                baseBronze: new THREE.Color(0x664422),  // 古铜金基底
-                brightGold: new THREE.Color(0xFFD700),  // 亮金
-                champagne: new THREE.Color(0xFFF5CA),   // 香槟金高光
-                flameCore: new THREE.Color(0xFF8C00)    // 橙金火焰
+                bright: new THREE.Color(0xFFFFFF),
+                gold: new THREE.Color(0xFFD700),
+                amber: new THREE.Color(0xFFBF00),
+                deep: new THREE.Color(0x8B4513)
             };
 
             for(let i=0; i<COUNT; i++) {
                 let v = new THREE.Vector3();
                 let c = new THREE.Color();
-                let pSize = 0.6;
-                let angle = Math.random() * Math.PI * 2;
-
-                if (i < 1200) { // 中层：流金瀑布
-                    const t = tiers[1];
-                    const drip = Math.random() * Math.random() * t.h * 1.3;
-                    const r = t.r * 1.03;
-                    v.set(r * Math.cos(angle), t.y + t.h - drip, r * Math.sin(angle));
-                    c.lerpColors(palette.champagne, palette.brightGold, drip/t.h);
-                    pSize = 0.5 + Math.random() * 0.5;
+                
+                if (i < 2500) { 
+                    // 1. 核心光团 (白金渐变核心)
+                    const r = 8 * Math.cbrt(Math.random());
+                    v.setFromSphericalCoords(r, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
+                    c.lerpColors(palette.gold, palette.bright, 1 - r/8);
                 } 
-                else if (i < 2200) { // 底层：金色菱格铆钉装饰
-                    const t = tiers[0];
-                    const rows = 7; const cols = 20;
-                    const rowIdx = Math.floor(Math.random() * rows);
-                    const colIdx = Math.floor(Math.random() * cols);
-                    angle = (colIdx / cols) * Math.PI * 2;
-                    const hRel = rowIdx / rows;
-                    v.set(t.r * 1.05 * Math.cos(angle), t.y + hRel * t.h, t.r * 1.05 * Math.sin(angle));
-                    c.copy(palette.brightGold);
-                    pSize = 0.9; 
-                    v.add(new THREE.Vector3((Math.random()-0.5)*0.4, (Math.random()-0.5)*0.4, (Math.random()-0.5)*0.4));
+                else if (i < 5500) {
+                    // 2. 金色旋流轨道
+                    const orbitIdx = (i - 2500) % 3;
+                    const angle = (i / 2500) * Math.PI * 2 * (5 + orbitIdx);
+                    const r = 13 + orbitIdx * 3;
+                    v.set(r * Math.cos(angle), 0, r * Math.sin(angle));
+                    const axis = new THREE.Vector3(Math.cos(orbitIdx), 1, Math.sin(orbitIdx)).normalize();
+                    v.applyAxisAngle(axis, Math.PI / 4);
+                    // 轨道色彩波动
+                    c.lerpColors(palette.amber, palette.gold, (Math.sin(angle)+1)/2);
                 }
-                else if (i < 2800) { // 顶层：皇冠与圣火
-                    const t = tiers[2];
-                    if (Math.random() > 0.4) { // 皇冠
-                        const r = t.r * (0.9 + Math.random()*0.2);
-                        v.set(r * Math.cos(angle), t.y + t.h + Math.random() * 2.5, r * Math.sin(angle));
-                        c.copy(palette.brightGold); pSize = 0.7;
-                    } else { // 圣火
-                        const r = Math.random() * 1.2;
-                        const h = Math.random() * 5;
-                        v.set(r * Math.cos(angle), t.y + t.h + 1 + h, r * Math.sin(angle));
-                        c.lerpColors(palette.brightGold, palette.flameCore, h/5);
-                        pSize = 1.1; 
-                        v.x *= (1 - h/6); v.z *= (1 - h/6);
-                    }
-                }
-                else { // 蛋糕主体 (古铜金基底)
-                    let t = i < COUNT * 0.75 ? tiers[0] : (i < COUNT * 0.9 ? tiers[1] : tiers[2]);
-                    const r = t.r * (0.9 + Math.random() * 0.1);
-                    v.set(r * Math.cos(angle), t.y + Math.random() * t.h, r * Math.sin(angle));
-                    c.copy(palette.baseBronze).multiplyScalar(0.8 + Math.random()*0.4); 
-                    pSize = 0.7;
+                else {
+                    // 3. 外围金色星尘
+                    const r = 20 + Math.random() * 15;
+                    v.setFromSphericalCoords(r, Math.acos(2*Math.random()-1), Math.random()*Math.PI*2);
+                    c.copy(palette.gold).multiplyScalar(0.5);
                 }
 
                 treePos.push(v.clone());
-                starPos.push(new THREE.Vector3().setFromSphericalCoords(55 + Math.random()*35, Math.random()*Math.PI, Math.random()*Math.PI*2));
+                starPos.push(new THREE.Vector3().setFromSphericalCoords(60 + Math.random()*40, Math.random()*Math.PI, Math.random()*Math.PI*2));
                 currentPos.push(v.clone());
+                
                 posArr[i*3] = v.x; posArr[i*3+1] = v.y; posArr[i*3+2] = v.z;
                 colArr[i*3] = c.r; colArr[i*3+1] = c.g; colArr[i*3+2] = c.b;
-                sizeArr[i] = pSize;
             }
 
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-            geo.setAttribute('size', new THREE.BufferAttribute(sizeArr, 1));
 
             particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 1.0, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
+                size: 0.8, map: createStarTexture(), transparent: true, blending: THREE.AdditiveBlending, 
                 vertexColors: true, depthWrite: false, sizeAttenuation: true 
             }));
             mainGroup.add(particleSystem);
@@ -221,8 +187,8 @@
             const now = Date.now();
             morphFactor = THREE.MathUtils.lerp(morphFactor, targetMorph, 0.2);
             
-            mainGroup.rotation.y += 0.0025;
-            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY, 0.1);
+            mainGroup.rotation.y += 0.002;
+            mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, targetRotY + mainGroup.rotation.y, 0.1);
             mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, targetRotX, 0.1);
 
             imageGroup.children.forEach((mesh) => {
@@ -231,26 +197,15 @@
             });
 
             const posAttr = particleSystem.geometry.attributes.position;
-            const sizeAttr = particleSystem.geometry.attributes.size;
             for(let i=0; i<COUNT; i++) {
                 currentPos[i].lerpVectors(treePos[i], starPos[i], morphFactor);
-                
-                let wave = 0;
-                if (i < 1200) wave = Math.sin(now * 0.003 + i) * 0.08; // 流金
-                else if (i >= 2200 && i < 2800) wave = Math.sin(now * 0.006 + i) * 0.14; // 火焰
-                else wave = Math.sin(now * 0.001 + i) * 0.03; // 主体
-
-                posAttr.array[i*3] = currentPos[i].x;
-                posAttr.array[i*3+1] = currentPos[i].y + wave;
-                posAttr.array[i*3+2] = currentPos[i].z;
-
-                // 聚合时让金色装饰闪烁
-                if (morphFactor < 0.3 && i < 2800) {
-                     sizeAttr.array[i] = sizeArr[i] * (1 + Math.sin(now * 0.005 + i)*0.25);
-                }
+                // 呼吸效果
+                let pulse = Math.sin(now * 0.002 + (i % 100)) * 0.05;
+                posAttr.array[i*3] = currentPos[i].x * (1 + pulse);
+                posAttr.array[i*3+1] = currentPos[i].y * (1 + pulse);
+                posAttr.array[i*3+2] = currentPos[i].z * (1 + pulse);
             }
             posAttr.needsUpdate = true;
-            sizeAttr.needsUpdate = true;
             renderer.render(scene, camera);
         }
 
@@ -267,11 +222,11 @@
                         let openCount = 0;
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
-                        targetRotY = (0.5 - h[9].x) * 5;
-                        targetRotX = (h[9].y - 0.5) * 3;
-                        info.innerHTML = "✨ 记忆星河已开启 | 移动手掌控制视角";
+                        targetRotY = (0.5 - h[9].x) * 4;
+                        targetRotX = (h[9].y - 0.5) * 2;
+                        info.innerHTML = "✨ 流金能量已汇聚 | 移动手掌控制视角";
                     } else {
-                        info.innerText = "👋 挥挥手，铸造流金岁月";
+                        info.innerText = "👋 挥挥手，开启 2026 辉煌篇章";
                     }
                 });
 
