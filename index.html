@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>2026元旦快乐</title>
+    <title>2026元旦快乐 - 完整书法图层版</title>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
@@ -63,7 +63,7 @@
         <h1 id="main-title">
             <span class="year">2026</span>
             <span class="bless-1">元旦快乐</span>
-            <span class="bless-2">步履所至皆是通往心仪的方向</span>
+            <span class="bless-2">步履所至皆是通往心仪方向的路标。</span>
         </h1>
     </div>
 
@@ -81,7 +81,6 @@
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
-        // 保持 3000 粒子数以确保手机端流畅
         const COUNT = 3000;
         const IMG_COUNT = 10;
 
@@ -122,8 +121,14 @@
                 });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 30, -5, Math.sin(angle) * 30);
-                mesh.lookAt(0, -5, 0); 
+                
+                // --- 修改点开始：调整了Y轴坐标和看向的中心点 ---
+                // 原来是 -5，现在改为 0，使其向上移动到中心平面
+                mesh.position.set(Math.cos(angle) * 30, 0, Math.sin(angle) * 30);
+                // 让图片看向新的中心点 (0,0,0)
+                mesh.lookAt(0, 0, 0); 
+                // --- 修改点结束 ---
+
                 imageGroup.add(mesh);
             }
 
@@ -235,4 +240,3 @@
     </script>
 </body>
 </html>
-
