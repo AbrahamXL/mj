@@ -36,8 +36,11 @@
             font-size: 7.5rem; display: block; letter-spacing: -2px;
         }
 
+        /* 第一行文字 */
         #main-title .bless-1 { font-size: 4rem; display: block; letter-spacing: 0.2em; margin-top: -5px; font-weight: bold; }
-        #main-title .bless-2 { font-size: 2.5rem; display: block; letter-spacing: 0.5em; opacity: 1; margin-top: 15px; }
+        
+        /* 第二行文字：调整了字号和字间距以适应长句 */
+        #main-title .bless-2 { font-size: 2.2rem; display: block; letter-spacing: 0.3em; opacity: 1; margin-top: 15px; white-space: nowrap; }
 
         @keyframes artisticShimmer {
             0% { background-position: 0% 50%; }
@@ -59,7 +62,7 @@
         <h1 id="main-title">
             <span class="year">2026</span>
             <span class="bless-1">元旦快乐</span>
-            <span class="bless-2">学业有成</span>
+            <span class="bless-2">天天开心，学业有成</span>
         </h1>
     </div>
 
@@ -109,6 +112,7 @@
             mainGroup.add(imageGroup);
             const loader = new THREE.TextureLoader();
             for(let i=1; i<=IMG_COUNT; i++) {
+                // 注意：这里需要对应的 mj 文件夹下的图片才能正常显示背景图层
                 const texture = loader.load(`./mj/${i}.jpg`, undefined, undefined, () => {});
                 const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
@@ -187,7 +191,6 @@
                 mesh.scale.setScalar(THREE.MathUtils.clamp(morphFactor * 1.1, 0.01, 1.1));
             });
 
-            // 保持背景繁星效果
             particleSystem.material.size = 0.8 + (morphFactor * 1.0);
             particleSystem.material.opacity = 0.6 + (morphFactor * 0.2);
 
@@ -218,9 +221,8 @@
                         fingers.forEach(tip => { if (h[tip].y < h[tip-2].y) openCount++; });
                         targetMorph = openCount / 4;
                         
-                        // --- 灵敏度微调：降低乘数使旋转更平稳 ---
-                        targetRotY = (0.5 - h[9].x) * 2.5; // 从 4 降至 2.5
-                        targetRotX = (h[9].y - 0.5) * 1.2; // 从 2 降至 1.2
+                        targetRotY = (0.5 - h[9].x) * 2.5; 
+                        targetRotX = (h[9].y - 0.5) * 1.2; 
                         
                         info.innerHTML = "✨ 流金能量已汇聚 | 移动手掌控制视角";
                     } else {
