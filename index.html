@@ -122,13 +122,11 @@
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
                 
-                // --- 修改点开始：调整了Y轴坐标和看向的中心点 ---
-                // 原来是 -5，现在改为 0，使其向上移动到中心平面
-                mesh.position.set(Math.cos(angle) * 30, 0, Math.sin(angle) * 30);
-                // 让图片看向新的中心点 (0,0,0)
+                // --- 修改点：将半径从 30 缩小到 22 ---
+                mesh.position.set(Math.cos(angle) * 22, 0, Math.sin(angle) * 22);
+                // -----------------------------------
+                
                 mesh.lookAt(0, 0, 0); 
-                // --- 修改点结束 ---
-
                 imageGroup.add(mesh);
             }
 
@@ -240,5 +238,3 @@
     </script>
 </body>
 </html>
-
-
