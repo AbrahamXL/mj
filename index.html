@@ -81,6 +81,7 @@
         let treePos = [], starPos = [], currentPos = [];
         let morphFactor = 0, targetMorph = 0, targetRotX = 0, targetRotY = 0;
 
+        // 保持优化的 3000 粒子数
         const COUNT = 3000;
         const IMG_COUNT = 10;
 
@@ -122,10 +123,8 @@
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), material);
                 const angle = ((i-1) / IMG_COUNT) * Math.PI * 2;
                 
-                // --- 修改点：将半径从 30 缩小到 22 ---
+                // 保持紧凑半径 22 和 居中高度 0
                 mesh.position.set(Math.cos(angle) * 22, 0, Math.sin(angle) * 22);
-                // -----------------------------------
-                
                 mesh.lookAt(0, 0, 0); 
                 imageGroup.add(mesh);
             }
@@ -238,4 +237,3 @@
     </script>
 </body>
 </html>
-
